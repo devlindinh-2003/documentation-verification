@@ -2,84 +2,106 @@ import {
   Injectable,
   BadRequestException,
   Inject,
-  UnauthorizedException,
 } from '@nestjs/common';
+import { StorageService } from '../storage/storage.service';
 import { StateMachineService } from './state-machine.service';
 import { UploadUrlDto } from './dto/upload-url.dto';
 import { randomUUID } from 'crypto';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { DRIZZLE } from '../db/db.module';
-import { verificationRecords } from '../db/schema';
-import { eq } from 'drizzle-orm';
-import { WebhookPayloadDto } from './webhook.schema';
-import { ConfigService } from '@nestjs/config';
+import { verificationRecords, users } from '../db/schema';
+import { eq, and, inArray } from 'drizzle-orm';
+import { ConflictException } from '@nestjs/common';
+
+export const MAX_PENDING_DOCUMENTS = 5;
 
 @Injectable()
 export class DocumentVerificationService {
-  private mockStorage = new Map<
-    string,
-    { size: number; mime: string; name: string }
-  >();
-
   constructor(
     private readonly stateMachine: StateMachineService,
+    private readonly storageService: StorageService,
     @InjectQueue('verification-jobs') private verificationQueue: Queue,
     @Inject(DRIZZLE) private readonly db: any,
-    private readonly configService: ConfigService,
   ) {}
 
   async generateUploadUrl(dto: UploadUrlDto) {
-    const documentKey = randomUUID();
+    const documentKey = `${randomUUID()}-${dto.fileName}`;
 
-    // Mock storing the expected metadata
-    this.mockStorage.set(documentKey, {
-      size: dto.fileSize,
-      mime: dto.mimeType,
-      name: dto.fileName,
-    });
+    const { signedUrl, token } =
+      await this.storageService.createSignedUploadUrl(documentKey);
 
-    const fakePresignedUrl = `https://mock-storage.local/upload/${documentKey}`;
-    return { uploadUrl: fakePresignedUrl, documentKey };
+    return {
+      uploadUrl: signedUrl,
+      documentKey,
+      token,
+    };
   }
 
   async confirmUploadAndStartVerification(
     documentKey: string,
     sellerId: string,
   ) {
-    const storedObject = this.mockStorage.get(documentKey);
-    if (!storedObject) {
-      throw new BadRequestException('Document not found in storage');
-    }
+    const result = await this.db.transaction(async (tx: any) => {
+      // 1. Lock the user row to serialize verification requests for this seller
+      // This prevents race conditions where multiple parallel uploads could bypass the limit
+      await tx.select().from(users).where(eq(users.id, sellerId)).for('update');
 
-    if (storedObject.size > 10 * 1024 * 1024) {
-      throw new BadRequestException('Document exceeds 10MB limit');
-    }
+      // 2. Count active verifications (pending or processing)
+      const activeRecords = await tx
+        .select()
+        .from(verificationRecords)
+        .where(
+          and(
+            eq(verificationRecords.sellerId, sellerId),
+            inArray(verificationRecords.status, ['pending', 'processing']),
+          ),
+        );
 
-    if (
-      !['application/pdf', 'image/jpeg', 'image/png'].includes(
-        storedObject.mime,
-      )
-    ) {
-      throw new BadRequestException('Invalid MIME type');
-    }
+      if (activeRecords.length >= MAX_PENDING_DOCUMENTS) {
+        throw new ConflictException(
+          `Maximum ${MAX_PENDING_DOCUMENTS} pending documents reached`,
+        );
+      }
 
-    const record = await this.stateMachine.createPendingRecord(
-      sellerId,
-      documentKey,
-      storedObject.name,
-      storedObject.size,
-      storedObject.mime,
-    );
+      const metadata = await this.storageService.getFileMetadata(documentKey);
+      if (!metadata) {
+        throw new BadRequestException('Document not found in storage');
+      }
+
+      if (metadata.size > 10 * 1024 * 1024) {
+        throw new BadRequestException('Document exceeds 10MB limit');
+      }
+
+      if (
+        !['application/pdf', 'image/jpeg', 'image/png'].includes(metadata.mime)
+      ) {
+        throw new BadRequestException('Invalid MIME type');
+      }
+
+      const record = await this.stateMachine.createPendingRecord(
+        sellerId,
+        documentKey,
+        metadata.name,
+        metadata.size,
+        metadata.mime,
+        tx, // Pass the transaction context
+      );
+
+      return record;
+    });
 
     const externalJobId = randomUUID();
 
     await this.verificationQueue.add(
       'verify-document',
       {
-        recordId: record.id,
-        documentKey: record.documentKey,
-        version: record.version,
+        recordId: result.id,
+        sellerId: result.sellerId,
+        documentKey: result.documentKey,
+        documentName: result.documentName,
+        documentSize: result.documentSize,
+        version: result.version,
         externalJobId,
       },
       {
@@ -92,46 +114,14 @@ export class DocumentVerificationService {
       },
     );
 
-    return { recordId: record.id, status: record.status };
+    return { recordId: result.id, status: result.status };
   }
 
-  async handleWebhookCallback(payload: WebhookPayloadDto, signature: string) {
-    if (
-      signature !== this.configService.get('HMAC_SECRET') &&
-      signature !== 'valid-signature-for-mock'
-    ) {
-      throw new UnauthorizedException('Invalid signature');
-    }
-
-    const records = await this.db
+  async getAllVerifications(sellerId: string) {
+    return this.db
       .select()
       .from(verificationRecords)
-      .where(eq(verificationRecords.externalJobId, payload?.externalJobId))
-      .limit(1);
-    const record = records?.[0];
-
-    if (!record || record.status !== 'processing') {
-      return { status: 'acknowledged' };
-    }
-
-    try {
-      await this.stateMachine.transition(
-        record.id,
-        record.version,
-        payload?.result,
-        'system',
-        'system',
-        'vendor_webhook_resolution',
-        { payload },
-      );
-    } catch (error: any) {
-      if (error?.status === 409) {
-        return { status: 'acknowledged' };
-      }
-      throw error;
-    }
-
-    return { status: 'success' };
+      .where(eq(verificationRecords.sellerId, sellerId));
   }
 
   async getMyVerification(sellerId: string) {
@@ -140,10 +130,6 @@ export class DocumentVerificationService {
       .from(verificationRecords)
       .where(eq(verificationRecords.sellerId, sellerId))
       .limit(1);
-
-    // Sort logic isn't strictly necessary with 1 limit if it's the only one,
-    // but typically we'd do an order by if there could be multiple.
-    // For now we assume one verification per seller.
     return records[0] || null;
   }
 }

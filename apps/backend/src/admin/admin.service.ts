@@ -1,20 +1,25 @@
 import {
   Injectable,
   Inject,
+  Logger,
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
 import { DRIZZLE } from '../db/db.module';
 import { verificationRecords, auditEvents } from '../db/schema';
-import { eq, desc, asc, and } from 'drizzle-orm';
+import { eq, desc, asc, and, count } from 'drizzle-orm';
 import { StateMachineService } from '../document-verification/state-machine.service';
+import { StorageService } from '../storage/storage.service';
 import { DecisionDto } from './dto/decision.dto';
 
 @Injectable()
 export class AdminService {
+  private readonly logger = new Logger(AdminService.name);
+
   constructor(
     @Inject(DRIZZLE) private readonly db: any,
     private readonly stateMachine: StateMachineService,
+    private readonly storageService: StorageService,
   ) {}
 
   async listVerifications(
@@ -22,14 +27,28 @@ export class AdminService {
     limit: number = 20,
     offset: number = 0,
   ) {
-    let query = this.db.select().from(verificationRecords);
+    let whereClause: any = undefined;
     if (status) {
-      query = query.where(eq(verificationRecords.status, status as any));
+      whereClause = eq(verificationRecords.status, status as any);
     }
-    return query
+
+    const data = await this.db
+      .select()
+      .from(verificationRecords)
+      .where(whereClause)
       .orderBy(desc(verificationRecords.createdAt))
       .limit(limit)
       .offset(offset);
+
+    const [totalResult] = await this.db
+      .select({ count: count() })
+      .from(verificationRecords)
+      .where(whereClause);
+
+    return {
+      data,
+      total: totalResult.count,
+    };
   }
 
   async getVerificationById(recordId: string) {
@@ -56,9 +75,10 @@ export class AdminService {
       .where(eq(verificationRecords.id, recordId));
     if (!record) throw new NotFoundException('Record not found');
 
-    // In reality, call AWS SDK to generate a presigned GET URL for record.documentKey
-    const mockSignedGetUrl = `https://mock-storage.local/download/${record.documentKey}?sig=temp`;
-    return { url: mockSignedGetUrl };
+    const signedUrl = await this.storageService.getSignedUrl(
+      record.documentKey,
+    );
+    return { url: signedUrl };
   }
 
   async claimRecord(recordId: string, adminId: string) {
@@ -69,13 +89,10 @@ export class AdminService {
         .where(eq(verificationRecords.id, recordId));
       if (!record) throw new NotFoundException('Record not found');
 
+      // In a single-admin setup, we allow taking over the lock at any time.
+      // The audit history will still track the state changes.
       if (record.lockedBy && record.lockedBy !== adminId) {
-        const tenMinsAgo = new Date(Date.now() - 10 * 60 * 1000);
-        if (record.lockedAt && record.lockedAt > tenMinsAgo) {
-          throw new ConflictException(
-            'Record is currently locked by another admin',
-          );
-        }
+        this.logger.log(`Admin ${adminId} is taking over lock from ${record.lockedBy}`);
       }
 
       const [updated] = await tx

@@ -4,54 +4,56 @@ import { Logger, Injectable, Inject } from '@nestjs/common';
 import { DRIZZLE } from '../db/db.module';
 import { verificationRecords, users } from '../db/schema';
 import { eq } from 'drizzle-orm';
+import { NotificationService } from './notification.service';
 
 @Processor('notification-jobs')
 @Injectable()
 export class NotificationWorker extends WorkerHost {
   private readonly logger = new Logger(NotificationWorker.name);
 
-  constructor(@Inject(DRIZZLE) private readonly db: any) {
+  constructor(
+    @Inject(DRIZZLE) private readonly db: any,
+    private readonly notificationService: NotificationService,
+  ) {
     super();
   }
 
   async process(job: Job<any, any, string>): Promise<any> {
     const { recordId, sellerId, status } = job.data;
     this.logger.log(
-      `Sending email notification to seller ${sellerId} for record ${recordId} (status: ${status})`,
+      `Processing notification for seller ${sellerId} for record ${recordId} (status: ${status})`,
     );
 
     const [seller] = await this.db
       .select()
       .from(users)
       .where(eq(users.id, sellerId));
+    
     if (!seller) {
       this.logger.warn(`Seller not found: ${sellerId}`);
       return;
     }
 
     try {
-      await this.mockSendEmail(
-        seller.email,
-        `Your verification status is now: ${status}`,
-      );
+      // Create in-app notification
+      await this.notificationService.createNotification({
+        userId: sellerId,
+        title: 'Verification Update',
+        body: `Your verification status is now: ${status}`,
+        type: 'VERIFICATION_RESULT',
+        metadata: { recordId, status },
+      });
 
+      // Update verificationRecords.notifiedAt
       await this.db
         .update(verificationRecords)
         .set({ notifiedAt: new Date() })
         .where(eq(verificationRecords.id, recordId));
 
-      this.logger.log(`Notification sent and logged for record ${recordId}`);
+      this.logger.log(`Notification created and record ${recordId} updated`);
     } catch (error: any) {
-      this.logger.error(`Failed to send notification: ${error.message}`);
+      this.logger.error(`Failed to process notification: ${error.message}`);
       throw error;
-    }
-  }
-
-  private async mockSendEmail(to: string, body: string): Promise<void> {
-    const { setTimeout } = await import('timers/promises');
-    await setTimeout(500);
-    if (Math.random() < 0.1) {
-      throw new Error('SMTP timeout');
     }
   }
 }

@@ -1,11 +1,10 @@
-import { Module } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { BullModule } from '@nestjs/bullmq';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { z } from 'zod';
 import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { DbModule } from './db/db.module';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
@@ -14,6 +13,8 @@ import { DocumentVerificationModule } from './document-verification/document-ver
 import { MockVerificationModule } from './mock-verification/mock-verification.module';
 import { AdminModule } from './admin/admin.module';
 import { NotificationModule } from './notification/notification.module';
+import { StorageModule } from './storage/storage.module';
+import { LoggerMiddleware } from './common/middleware/logger.middleware';
 
 @Module({
   imports: [
@@ -26,6 +27,9 @@ import { NotificationModule } from './notification/notification.module';
           REDIS_HOST: z.string().default('localhost'),
           REDIS_PORT: z.coerce.number().default(6379),
           PORT: z.coerce.number().default(3000),
+          SUPABASE_URL: z.string(),
+          SUPABASE_ANON_KEY: z.string().min(1),
+          SUPABASE_BUCKET: z.string().min(1),
         });
         return schema.parse(config);
       },
@@ -51,10 +55,10 @@ import { NotificationModule } from './notification/notification.module';
     MockVerificationModule,
     AdminModule,
     NotificationModule,
+    StorageModule,
   ],
   controllers: [AppController],
   providers: [
-    AppService,
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
@@ -69,4 +73,8 @@ import { NotificationModule } from './notification/notification.module';
     },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(LoggerMiddleware).forRoutes('*');
+  }
+}

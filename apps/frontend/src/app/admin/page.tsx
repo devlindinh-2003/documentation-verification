@@ -1,79 +1,186 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { api, PaginatedResult, VerificationRecord } from '../../lib/api';
-import { useAuth } from '../../hooks/useAuth';
-import { useRouter } from 'next/navigation';
-import { AdminTable } from '../../components/AdminTable';
-import { VerificationStatus } from '../../lib/status-config';
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { api, PaginatedResult, VerificationRecord } from "../../lib/api";
+import { useAuth } from "../../hooks/useAuth";
+import { useRouter } from "next/navigation";
+import { AdminTable } from "../../components/AdminTable";
+import {
+  LayoutGrid,
+  ListFilter,
+  Users,
+  Clock,
+  AlertTriangle,
+  CheckCircle2,
+} from "lucide-react";
 
 export default function AdminPage() {
-  const { isAuthenticated, role } = useAuth();
+  const { isAuthenticated, role, isInitialized } = useAuth();
   const router = useRouter();
-  
-  const [statusFilter, setStatusFilter] = useState<string>('');
+
+  const [statusFilter, setStatusFilter] = useState<string>("");
 
   useEffect(() => {
+    if (!isInitialized) return;
+
     if (!isAuthenticated) {
-      router.push('/login');
-    } else if (role !== 'admin') {
-      router.push('/seller');
+      router.push("/login");
+    } else if (role !== "admin") {
+      router.push("/seller");
     }
-  }, [isAuthenticated, role, router]);
+  }, [isInitialized, isAuthenticated, role, router]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-verifications', statusFilter],
+    queryKey: ["admin-verifications", statusFilter],
     queryFn: async () => {
-      const { data } = await api.get<PaginatedResult<VerificationRecord>>('/admin/verifications', {
-        params: { status: statusFilter || undefined, limit: 50, offset: 0 },
-      });
+      const { data } = await api.get<PaginatedResult<VerificationRecord>>(
+        "/admin/verifications",
+        {
+          params: { status: statusFilter || undefined, limit: 50, offset: 0 },
+        },
+      );
       return data;
     },
-    enabled: isAuthenticated && role === 'admin',
-    refetchInterval: 10000, // Poll every 10s to see new items
+    enabled: isAuthenticated && role === "admin",
+    refetchInterval: 10000,
   });
 
-  if (!isAuthenticated || role !== 'admin') return null;
+  // Fetch stats (simplified for now by using the full list, in real app would be separate endpoint)
+  const { data: allRecords } = useQuery({
+    queryKey: ["admin-stats"],
+    queryFn: async () => {
+      const { data } = await api.get<PaginatedResult<VerificationRecord>>(
+        "/admin/verifications",
+        {
+          params: { limit: 100, offset: 0 },
+        },
+      );
+      return data.data;
+    },
+    enabled: isAuthenticated && role === "admin",
+  });
+
+  const stats = {
+    total: allRecords?.length || 0,
+    pending: allRecords?.filter((r) => r.status === "pending").length || 0,
+    processing:
+      allRecords?.filter((r) => r.status === "processing").length || 0,
+    inconclusive:
+      allRecords?.filter((r) => r.status === "inconclusive").length || 0,
+  };
+
+  if (!isInitialized || !isAuthenticated || role !== "admin") return null;
+
+  console.log("data", data);
 
   return (
-    <div className="min-h-screen bg-slate-50 pt-16 pb-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-6xl mx-auto space-y-8">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Admin Dashboard</h1>
-            <p className="mt-2 text-slate-500">Review and manage seller verifications.</p>
+    <div className="min-h-screen bg-slate-50/50 pt-24 pb-20 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto space-y-10">
+        {/* Page Header */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-primary font-black uppercase tracking-tighter text-xs">
+              <LayoutGrid size={14} />
+              Admin Management
+            </div>
+            <h1 className="text-4xl font-black text-slate-900 tracking-tight">
+              Verification Queue
+            </h1>
+            <p className="text-slate-500 font-medium">
+              Review and process seller identification documents.
+            </p>
           </div>
-          
-          <div className="flex bg-white rounded-lg p-1 border border-slate-200 shadow-sm">
+
+          {/* Stats Row */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 w-full md:w-auto">
             {[
-              { id: '', label: 'All' },
-              { id: 'inconclusive', label: 'Needs Review' },
-              { id: 'pending', label: 'Pending' },
-            ].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setStatusFilter(tab.id)}
-                className={`px-4 py-2 text-sm font-medium rounded-md transition ${
-                  statusFilter === tab.id 
-                    ? 'bg-blue-50 text-blue-700 shadow-sm' 
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                }`}
+              {
+                label: "Total",
+                value: stats.total,
+                icon: Users,
+                color: "text-blue-600",
+                bg: "bg-blue-50",
+              },
+              {
+                label: "Pending",
+                value: stats.pending,
+                icon: Clock,
+                color: "text-slate-600",
+                bg: "bg-slate-100",
+              },
+              {
+                label: "Processing",
+                value: stats.processing,
+                icon: CheckCircle2,
+                color: "text-green-600",
+                bg: "bg-green-50",
+              },
+              {
+                label: "Review",
+                value: stats.inconclusive,
+                icon: AlertTriangle,
+                color: "text-amber-600",
+                bg: "bg-amber-50",
+              },
+            ].map((stat) => (
+              <div
+                key={stat.label}
+                className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3 min-w-[140px]"
               >
-                {tab.label}
-              </button>
+                <div
+                  className={`w-10 h-10 ${stat.bg} ${stat.color} rounded-xl flex items-center justify-center`}
+                >
+                  <stat.icon size={20} strokeWidth={2.5} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-tighter text-slate-400">
+                    {stat.label}
+                  </p>
+                  <p className="text-xl font-black text-slate-900 leading-none mt-0.5">
+                    {stat.value}
+                  </p>
+                </div>
+              </div>
             ))}
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          {isLoading ? (
-            <div className="flex justify-center p-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        {/* Filters & Table Section */}
+        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-200 overflow-hidden">
+          <div className="p-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-4 bg-slate-50/30">
+            <div className="flex items-center bg-white p-1 rounded-xl border border-slate-200/60 shadow-sm">
+              {[
+                { id: "", label: "All Requests" },
+                { id: "inconclusive", label: "Needs Review" },
+                { id: "pending", label: "Pending" },
+                { id: "processing", label: "Processing" },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setStatusFilter(tab.id)}
+                  className={`px-4 py-2 text-xs font-black uppercase tracking-tighter rounded-lg transition-all duration-200 ${
+                    statusFilter === tab.id
+                      ? "bg-primary text-white shadow-md shadow-primary/20 scale-[1.02]"
+                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
-          ) : data ? (
-            <AdminTable data={data.data} />
-          ) : null}
+          </div>
+
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center p-20 space-y-4">
+              <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+              <p className="text-xs font-black uppercase tracking-tighter text-slate-400">
+                Syncing with Queue...
+              </p>
+            </div>
+          ) : (
+            <AdminTable data={data?.data || []} />
+          )}
         </div>
       </div>
     </div>

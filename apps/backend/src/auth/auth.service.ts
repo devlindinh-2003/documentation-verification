@@ -20,6 +20,9 @@ export class AuthService {
   ) {}
 
   async register(registerDto: RegisterDto) {
+    if (registerDto.role === 'admin') {
+      throw new ConflictException('Admin registration is not allowed');
+    }
     const existingUser = await this.db
       .select()
       .from(users)
@@ -29,7 +32,7 @@ export class AuthService {
       throw new ConflictException('Email already exists');
     }
 
-    const hashedPassword = await argon2.hash(registerDto.passwordHash);
+    const hashedPassword = await argon2.hash(registerDto.password);
 
     const [newUser] = await this.db
       .insert(users)
@@ -56,7 +59,7 @@ export class AuthService {
     const user = userResult[0];
     const isPasswordValid = await argon2.verify(
       user.passwordHash,
-      loginDto.passwordHash,
+      loginDto.password,
     );
 
     if (!isPasswordValid) {

@@ -8,6 +8,13 @@
       "when": 1777184445432,
       "tag": "0000_worried_puck",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1777291526883,
+      "tag": "0001_nice_red_ghost",
+      "breakpoints": true
     }
   ]
 }

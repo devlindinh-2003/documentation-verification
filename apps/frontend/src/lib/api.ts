@@ -1,12 +1,17 @@
 import axios from 'axios';
 import { getToken, getRefreshToken, setTokens, clearTokens } from './auth';
 import { VerificationStatus } from './status-config';
+import { useAuth } from '../hooks/useAuth';
 
 export interface VerificationRecord {
   id: string;
   status: VerificationStatus;
+  sellerId: string;
+  externalJobId?: string | null;
   documentKey: string;
+  version: number;
   createdAt: string;
+  updatedAt: string;
   lockedBy?: string | null;
   lockedAt?: string | null;
 }
@@ -18,7 +23,22 @@ export interface AuditEvent {
   eventType: string;
   fromStatus: string;
   toStatus: string;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  title: string;
+  body: string;
+  type: 'VERIFICATION_RESULT';
+  isRead: boolean;
+  readAt: string | null;
+  metadata: {
+    recordId: string;
+    status: VerificationStatus;
+  };
   createdAt: string;
 }
 
@@ -71,19 +91,13 @@ api.interceptors.response.use(
             return api(originalRequest);
           }
         } catch (refreshError) {
-          // If refresh fails, clear tokens and redirect to login
-          clearTokens();
-          if (typeof window !== 'undefined') {
-            window.location.href = '/login';
-          }
+          // Use global auth state to logout and redirect
+          useAuth.getState().logout();
           return Promise.reject(refreshError);
         }
       } else {
-        // No refresh token available
-        clearTokens();
-        if (typeof window !== 'undefined') {
-          window.location.href = '/login';
-        }
+        // No refresh token available, logout and redirect
+        useAuth.getState().logout();
       }
     }
 

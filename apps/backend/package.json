@@ -21,7 +21,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio --port 4983",
+    "db:seed": "tsx src/db/seed.ts"
   },
   "dependencies": {
     "@nestjs/bullmq": "^11.0.4",
@@ -33,6 +34,7 @@
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/throttler": "^6.5.0",
+    "@supabase/supabase-js": "^2.104.1",
     "argon2": "^0.44.0",
     "bullmq": "^5.76.2",
     "drizzle-orm": "^0.45.2",

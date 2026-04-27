@@ -2,102 +2,92 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { Logger, Injectable } from '@nestjs/common';
 import { StateMachineService } from './state-machine.service';
+import { MockVerificationService } from '../mock-verification/mock-verification.service';
 
 @Processor('verification-jobs')
 @Injectable()
 export class VerificationWorker extends WorkerHost {
   private readonly logger = new Logger(VerificationWorker.name);
 
-  constructor(private readonly stateMachine: StateMachineService) {
+  constructor(
+    private readonly stateMachine: StateMachineService,
+    private readonly mockService: MockVerificationService,
+  ) {
     super();
   }
 
   async process(job: Job<any, any, string>): Promise<any> {
+
+    const {
+      recordId,
+      sellerId,
+      documentKey,
+      version: currentVersion,
+      externalJobId,
+    } = job.data;
+
     this.logger.log(
-      `Processing verification job ${job?.id} for record ${job?.data?.recordId}`,
+      `[Job ${job.id}] Starting verification for record ${recordId} (version ${currentVersion})`,
     );
 
-    const { recordId, documentKey, version, externalJobId } = job?.data || {};
-
-    let currentVersion = version;
-
     try {
-      // 1. Transition pending -> processing
-      const updatedRecord = await this.stateMachine.transition(
+      this.logger.log(`[Job ${job.id}] Transitioning to 'processing'...`);
+      await this.stateMachine.transition(
         recordId,
         currentVersion,
         'processing',
+        sellerId,
         'system',
-        'system',
-        'job_dispatched',
-        { externalJobId },
-        { externalJobId },
+        'job_processing_started',
+        { externalJobId, jobType: 'automated_verification' },
       );
-      currentVersion = updatedRecord.version;
-    } catch (error: any) {
-      if (error?.status === 409 || error?.status === 422) {
-        this.logger.warn(
-          `Skipping job ${job?.id}: state transition failed (${error?.message})`,
-        );
-        return;
-      }
-      throw error;
-    }
 
-    // 2. Call external mock service
-    try {
-      const response = await fetch(
-        process.env.MOCK_VENDOR_URL || 'http://localhost:8000/verify',
+      this.logger.log(
+        `[Job ${job.id}] Calling mock verification service for record ${recordId}`,
+      );
+      const mockResponse = await this.mockService.verifyDocument(documentKey);
+      
+      const finalStatus = mockResponse.status.toLowerCase() as any;
+      const eventType = this.mapStatusToEvent(mockResponse.status);
+
+      this.logger.log(`[Job ${job.id}] Mock service returned: ${finalStatus}. Transitioning...`);
+      await this.stateMachine.transition(
+        recordId,
+        currentVersion + 1,
+        finalStatus,
+        sellerId,
+        'system',
+        eventType,
         {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            externalJobId,
-            documentKey,
-            callbackUrl:
-              process.env.CALLBACK_URL ||
-              'http://localhost:8000/documents/callback',
-          }),
+          confidence: mockResponse.confidence,
+          message: mockResponse.message,
+          externalJobId,
         },
       );
 
-      if (!response.ok) {
-        throw new Error(`Vendor API error: ${response.statusText}`);
-      }
-    } catch (error: any) {
-      this.logger.error(`Failed to dispatch to vendor: ${error?.message}`);
-
-      const maxAttempts = job?.opts?.attempts || 1;
-      const currentAttempt = (job?.attemptsMade || 0) + 1;
-
-      if (currentAttempt >= maxAttempts) {
-        await this.stateMachine.transition(
-          recordId,
-          currentVersion,
-          'rejected',
-          'system',
-          'system',
-          'vendor_api_failure',
-          { error: error?.message },
-        );
-      } else {
-        const updatedRecord = await this.stateMachine.transition(
-          recordId,
-          currentVersion,
-          'pending',
-          'system',
-          'system',
-          'vendor_api_retry',
-          { error: error?.message, attempt: currentAttempt },
-        );
-
-        await job?.updateData({
-          ...job?.data,
-          version: updatedRecord?.version,
-        });
-      }
-
+      this.logger.log(
+        `[Job ${job.id}] Verification complete for record ${recordId}: ${finalStatus}`,
+      );
+      return { status: finalStatus };
+    } catch (error) {
+      this.logger.error(
+        `[Job ${job.id}] Verification failed for record ${recordId}: ${error.message}`,
+        error.stack,
+      );
       throw error;
+    }
+  }
+
+  private mapStatusToEvent(status: string): string {
+    switch (status) {
+      case 'VERIFIED':
+        return 'verification_automated_success';
+      case 'REJECTED':
+        return 'verification_content_rejected';
+      case 'INCONCLUSIVE':
+        return 'verification_manual_review_required';
+      default:
+        return 'verification_completed';
     }
   }
 }

@@ -4,7 +4,6 @@ import {
   Get,
   Body,
   Req,
-  Headers,
   NotFoundException,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
@@ -12,8 +11,6 @@ import { UploadUrlDto } from './dto/upload-url.dto';
 import { ConfirmUploadDto } from './dto/confirm-upload.dto';
 import { DocumentVerificationService } from './document-verification.service';
 import { Roles } from '../auth/roles.decorator';
-import { Public } from '../auth/public.decorator';
-import { WebhookPayloadDto } from './webhook.schema';
 
 @Controller('documents')
 @Roles('seller')
@@ -22,7 +19,7 @@ export class DocumentVerificationController {
     private readonly verificationService: DocumentVerificationService,
   ) {}
 
-  @Throttle({ default: { limit: 5, ttl: 3600000 } }) // Stricter rate limit for upload URL
+  @Throttle({ default: { limit: 5, ttl: 3600000 } })
   @Post('upload-url')
   async getUploadUrl(@Body() dto: UploadUrlDto) {
     return this.verificationService.generateUploadUrl(dto);
@@ -37,15 +34,6 @@ export class DocumentVerificationController {
     );
   }
 
-  @Public()
-  @Post('callback')
-  async webhookCallback(
-    @Body() payload: WebhookPayloadDto,
-    @Headers('x-webhook-signature') signature: string,
-  ) {
-    return this.verificationService.handleWebhookCallback(payload, signature);
-  }
-
   @Get('my')
   async getMyVerification(@Req() req: any) {
     const sellerId = req.user.id;
@@ -54,5 +42,11 @@ export class DocumentVerificationController {
       throw new NotFoundException('Verification record not found');
     }
     return record;
+  }
+
+  @Get()
+  async getAllVerifications(@Req() req: any) {
+    const sellerId = req.user.id;
+    return this.verificationService.getAllVerifications(sellerId);
   }
 }

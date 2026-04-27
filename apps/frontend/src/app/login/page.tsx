@@ -1,94 +1,136 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useAuth } from '../../hooks/useAuth';
-import { api } from '../../lib/api';
-import { useRouter } from 'next/navigation';
+import { useState } from "react";
+import { useAuth } from "../../hooks/useAuth";
+import { api } from "../../lib/api";
+import { useRouter } from "next/navigation";
+import { ShieldCheck, Mail, Lock, Loader2, ArrowRight } from "lucide-react";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  
+
   const login = useAuth((state) => state.login);
   const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
 
     try {
-      const { data } = await api.post('/auth/login', { email, passwordHash: password });
-      login(data.access_token, data.refreshToken || '');
-      const base64Url = data.access_token.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const { data } = await api.post("/auth/login", {
+        email,
+        password: password,
+      });
+      login(data.access_token, data.refreshToken || "");
+      const base64Url = data.access_token.split(".")[1];
+      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
       const jsonPayload = decodeURIComponent(
         atob(base64)
-          .split('')
-          .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-          .join('')
+          .split("")
+          .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+          .join(""),
       );
       const decoded = JSON.parse(jsonPayload);
-      
-      if (decoded.role === 'admin') {
-        router.push('/admin');
+
+      if (decoded.role === "admin") {
+        router.push("/admin");
       } else {
-        router.push('/seller');
+        router.push("/seller");
       }
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to login');
+    } catch (err: unknown) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      setError(axiosError.response?.data?.message || "Failed to login");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-slate-900 text-slate-100">
-      <div className="w-full max-w-md p-8 space-y-6 bg-slate-800 rounded-xl shadow-2xl border border-slate-700">
-        <div className="text-center">
-          <h1 className="text-3xl font-extrabold tracking-tight text-white">Welcome Back</h1>
-          <p className="mt-2 text-sm text-slate-400">Sign in to your account</p>
-        </div>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50/50 p-4">
+      <div className="w-full max-w-[440px] space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
         
-        {error && (
-          <div className="p-3 text-sm text-red-200 bg-red-900/50 border border-red-500/50 rounded-lg">
-            {error}
+        {/* Logo Section */}
+        <div className="text-center space-y-2">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-2xl shadow-xl shadow-primary/20 mb-2">
+            <ShieldCheck className="text-white" size={32} />
           </div>
-        )}
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">VeriFlow</h1>
+          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Secure Identity Gateway</p>
+        </div>
 
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-300">Email Address</label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2 mt-1 text-slate-100 bg-slate-900 border border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-              placeholder="you@example.com"
-            />
+        {/* Login Card */}
+        <div className="bg-white p-10 rounded-[32px] shadow-2xl shadow-slate-200/50 border border-slate-200">
+          <div className="space-y-2 mb-8">
+            <h2 className="text-xl font-black text-slate-900">Welcome Back</h2>
+            <p className="text-sm font-medium text-slate-500">Sign in to your dashboard to continue.</p>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300">Password</label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2 mt-1 text-slate-100 bg-slate-900 border border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-              placeholder="••••••••"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-lg font-medium transition disabled:opacity-50"
-          >
-            {loading ? 'Signing in...' : 'Sign In'}
-          </button>
-        </form>
+
+          {error && (
+            <div className="mb-6 p-4 text-xs font-bold text-red-600 bg-red-50 border border-red-100 rounded-2xl animate-in shake duration-500">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleLogin} className="space-y-5">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+                Email Address
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-bold focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none transition-all duration-200"
+                  placeholder="name@company.com"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+                Password
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-bold focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none transition-all duration-200"
+                  placeholder="••••••••"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-4 bg-primary text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-lg shadow-primary/20 hover:bg-primary/90 hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:translate-y-0 mt-4 flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <Loader2 className="animate-spin" size={18} />
+              ) : (
+                <>
+                  Enter Dashboard
+                  <ArrowRight size={16} strokeWidth={3} />
+                </>
+              )}
+            </button>
+          </form>
+        </div>
+
+        {/* Footer */}
+        <p className="text-center text-xs font-bold text-slate-400">
+          Trusted by over 10,000+ businesses globally.
+        </p>
       </div>
     </div>
   );

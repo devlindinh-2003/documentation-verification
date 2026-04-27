@@ -8,6 +8,7 @@ import {
   pgEnum,
   index,
   uniqueIndex,
+  boolean,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
@@ -54,13 +55,11 @@ export const verificationRecords = pgTable(
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
   },
-  (table) => ({
-    statusIdx: index('status_idx').on(table.status),
-    sellerIdIdx: index('seller_id_idx').on(table.sellerId),
-    externalJobIdIdx: uniqueIndex('external_job_id_idx').on(
-      table.externalJobId,
-    ),
-  }),
+  (table) => [
+    index('status_idx').on(table.status),
+    index('seller_id_idx').on(table.sellerId),
+    uniqueIndex('external_job_id_idx').on(table.externalJobId),
+  ],
 );
 
 export const auditEvents = pgTable(
@@ -80,9 +79,33 @@ export const auditEvents = pgTable(
     metadata: jsonb('metadata').notNull(),
     createdAt: timestamp('created_at').notNull().defaultNow(),
   },
-  (table) => ({
-    recordIdIdx: index('record_id_idx').on(table.recordId),
-  }),
+  (table) => [index('record_id_idx').on(table.recordId)],
+);
+
+export const notificationTypeEnum = pgEnum('notification_type', [
+  'VERIFICATION_RESULT',
+]);
+
+export const notifications = pgTable(
+  'notifications',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    title: text('title').notNull(),
+    body: text('body').notNull(),
+    type: notificationTypeEnum('type').notNull(),
+    isRead: boolean('is_read').notNull().default(false),
+    readAt: timestamp('read_at'),
+    metadata: jsonb('metadata').notNull(), // { recordId: string, status: string }
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (table) => [
+    index('notif_user_id_idx').on(table.userId),
+    // We will handle idempotency in the service layer since functional indexes on JSONB
+    // are tricky to define in a portable way in Drizzle schemas without raw SQL.
+  ],
 );
 
 export const usersRelations = relations(users, ({ many }) => ({
@@ -94,6 +117,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   }),
   lockedRecords: many(verificationRecords, { relationName: 'lockedRecords' }),
   auditEvents: many(auditEvents),
+  notifications: many(notifications),
 }));
 
 export const verificationRecordsRelations = relations(
@@ -124,4 +148,11 @@ export const auditEventsRelations = relations(auditEvents, ({ one }) => ({
     references: [verificationRecords.id],
   }),
   actor: one(users, { fields: [auditEvents.actorId], references: [users.id] }),
+}));
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, {
+    fields: [notifications.userId],
+    references: [users.id],
+  }),
 }));

@@ -22,8 +22,9 @@ export class StateMachineService {
     documentName: string,
     documentSize: number,
     documentMime: string,
+    existingTx?: any,
   ) {
-    return await this.db.transaction(async (tx: any) => {
+    const runner = async (tx: any) => {
       const [newRecord] = await tx
         .insert(verificationRecords)
         .values({
@@ -50,7 +51,12 @@ export class StateMachineService {
       });
 
       return newRecord;
-    });
+    };
+
+    if (existingTx) {
+      return await runner(existingTx);
+    }
+    return await this.db.transaction(runner);
   }
 
   async transition(
@@ -112,7 +118,11 @@ export class StateMachineService {
         metadata,
       });
 
-      if (['verified', 'rejected', 'approved', 'denied'].includes(toStatus)) {
+      if (
+        ['verified', 'rejected', 'approved', 'denied', 'inconclusive'].includes(
+          toStatus,
+        )
+      ) {
         this.eventEmitter.emit('verification.finalised', updatedRecord);
       }
 

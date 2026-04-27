@@ -1,14 +1,23 @@
-import { VerificationStatus, STATUS_CONFIG } from '../lib/status-config';
+import { STATUS_CONFIG, VerificationStatus } from '../lib/status-config';
 
 interface StatusBadgeProps {
-  status: VerificationStatus;
+  status?: VerificationStatus;
 }
 
 export function StatusBadge({ status }: StatusBadgeProps) {
+  if (!status || !STATUS_CONFIG[status]) return null;
+
   const config = STATUS_CONFIG[status];
-  
+
   return (
-    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium text-white ${config.color} shadow-sm`}>
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border transition-colors duration-200 ${config.color}`}>
+      <span className={`w-1.5 h-1.5 rounded-full mr-1.5 animate-pulse ${
+        config.theme === 'blue' ? 'bg-blue-400' :
+        config.theme === 'green' ? 'bg-green-400' :
+        config.theme === 'red' ? 'bg-red-400' :
+        config.theme === 'yellow' ? 'bg-yellow-400' :
+        'bg-slate-400'
+      }`} />
       {config.label}
     </span>
   );

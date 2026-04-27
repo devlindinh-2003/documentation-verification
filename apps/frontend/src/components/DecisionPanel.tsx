@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, X, AlertCircle } from 'lucide-react';
+import { Check, X, AlertCircle, MessageSquare, Loader2, ShieldCheck, ShieldX } from 'lucide-react';
 
 interface DecisionPanelProps {
   onSubmit: (decision: 'approved' | 'denied', reason: string) => Promise<void>;
@@ -18,67 +18,83 @@ export function DecisionPanel({ onSubmit, disabled }: DecisionPanelProps) {
     setSubmitting(decision);
     try {
       await onSubmit(decision, reason);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to submit decision');
+    } catch (err: unknown) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      setError(axiosError.response?.data?.message || 'Failed to submit decision');
     } finally {
       setSubmitting(null);
     }
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-      <div className="p-4 bg-slate-50 border-b border-slate-200">
-        <h3 className="text-sm font-semibold text-slate-800">Admin Decision Panel</h3>
+    <div className="bg-white rounded-2xl border-2 border-slate-200 shadow-xl shadow-slate-200/50 overflow-hidden animate-in slide-in-from-bottom-2 duration-500">
+      <div className="p-5 bg-slate-50/50 border-b border-slate-200 flex items-center justify-between">
+        <h3 className="text-sm font-bold text-slate-900 uppercase tracking-tighter flex items-center gap-2">
+          <Check size={16} strokeWidth={3} className="text-primary" />
+          Review Decision
+        </h3>
+        <div className="px-2 py-1 bg-white border border-slate-200 rounded text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+          Manual Action
+        </div>
       </div>
       
-      <div className="p-6 space-y-4">
+      <div className="p-6 space-y-6">
         {error && (
-          <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg flex items-start gap-2">
+          <div className="p-4 text-xs font-bold text-red-600 bg-red-50 border border-red-100 rounded-xl flex items-start gap-2">
             <AlertCircle size={16} className="mt-0.5 shrink-0" />
             <span>{error}</span>
           </div>
         )}
         
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
-            Decision Reason (Optional)
+        <div className="space-y-3">
+          <label className="flex items-center gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+            <MessageSquare size={14} />
+            Reasoning & Internal Notes
           </label>
           <textarea
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             disabled={disabled || submitting !== null}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[100px] outline-none transition disabled:bg-slate-50 disabled:text-slate-500"
-            placeholder="Explain your decision..."
+            className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-medium focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 min-h-[120px] outline-none transition-all duration-200 disabled:opacity-50 placeholder:text-slate-300"
+            placeholder="Explain why this document was approved or denied. This will be recorded in the audit history..."
           />
         </div>
         
-        <div className="flex gap-3 pt-2">
+        <div className="flex flex-col sm:flex-row gap-3 pt-2">
           <button
             onClick={() => handleSubmit('denied')}
             disabled={disabled || submitting !== null}
-            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-white border-2 border-red-200 text-red-700 hover:bg-red-50 hover:border-red-300 font-medium rounded-lg transition disabled:opacity-50"
+            className="flex-1 group relative flex items-center justify-center gap-2 px-6 py-4 bg-white border-2 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-600 font-bold uppercase tracking-tighter text-xs rounded-2xl transition-all duration-200 disabled:opacity-50 overflow-hidden"
           >
             {submitting === 'denied' ? (
-              <div className="w-4 h-4 border-2 border-red-700 border-t-transparent rounded-full animate-spin"></div>
+              <Loader2 className="animate-spin" size={18} strokeWidth={3} />
             ) : (
-              <X size={18} />
+              <>
+                <ShieldX size={18} strokeWidth={2.5} className="group-hover:scale-110 transition-transform" />
+                Reject Identity
+              </>
             )}
-            Deny Document
           </button>
           
           <button
             onClick={() => handleSubmit('approved')}
             disabled={disabled || submitting !== null}
-            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white hover:bg-green-700 font-medium rounded-lg shadow-sm transition disabled:opacity-50"
+            className="flex-1 group relative flex items-center justify-center gap-2 px-6 py-4 bg-primary text-white font-bold uppercase tracking-tighter text-xs rounded-2xl shadow-lg shadow-primary/20 hover:bg-primary/90 hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:translate-y-0 overflow-hidden"
           >
             {submitting === 'approved' ? (
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              <Loader2 className="animate-spin" size={18} strokeWidth={3} />
             ) : (
-              <Check size={18} />
+              <>
+                <ShieldCheck size={18} strokeWidth={2.5} className="group-hover:scale-110 transition-transform" />
+                Approve Identity
+              </>
             )}
-            Approve Document
           </button>
         </div>
+
+        <p className="text-[10px] text-center font-bold text-slate-400">
+          This action is permanent and will notify the seller immediately.
+        </p>
       </div>
     </div>
   );

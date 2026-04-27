@@ -1,46 +1,61 @@
-export type VerificationStatus = 
-  | 'pending'
-  | 'processing'
-  | 'verified'
-  | 'rejected'
-  | 'inconclusive'
-  | 'approved'
-  | 'denied';
+export type VerificationStatus =
+  | "pending"
+  | "processing"
+  | "verified"
+  | "rejected"
+  | "inconclusive"
+  | "approved"
+  | "denied";
 
-export const STATUS_CONFIG: Record<VerificationStatus, { label: string; color: string; message: string }> = {
+export const STATUS_CONFIG: Record<
+  VerificationStatus,
+  {
+    label: string;
+    color: string;
+    message: string;
+    theme: "blue" | "green" | "red" | "yellow" | "slate";
+  }
+> = {
   pending: {
-    label: 'Pending',
-    color: 'bg-slate-500',
-    message: 'Your document is in the queue.',
+    label: "Waiting for review",
+    color: "bg-slate-100 text-slate-700 border-slate-200",
+    message: "Your submission is in the queue.",
+    theme: "slate",
   },
   processing: {
-    label: 'Processing',
-    color: 'bg-blue-500',
-    message: 'Your document is currently being verified. This may take up to 24 hours.',
+    label: "Processing...",
+    color: "bg-blue-50 text-blue-700 border-blue-100",
+    message: "We are currently verifying your identity.",
+    theme: "blue",
   },
   verified: {
-    label: 'Verified',
-    color: 'bg-green-500',
-    message: 'Your document was automatically verified! You can now start selling.',
+    label: "Verified",
+    color: "bg-green-50 text-green-700 border-green-100",
+    message: "Identity verification successful.",
+    theme: "green",
   },
   rejected: {
-    label: 'Rejected',
-    color: 'bg-red-500',
-    message: 'Your document could not be verified automatically and was rejected.',
+    label: "System Rejected",
+    color: "bg-red-50 text-red-700 border-red-100",
+    message: "Automated verification was unsuccessful.",
+    theme: "red",
   },
   inconclusive: {
-    label: 'In Review',
-    color: 'bg-yellow-500',
-    message: 'We need a little more time to review your document. Our team is looking into it.',
+    label: "Needs review",
+    color: "bg-yellow-50 text-yellow-700 border-yellow-100",
+    message: "Requires manual verification by our team.",
+    theme: "yellow",
   },
   approved: {
-    label: 'Approved',
-    color: 'bg-green-600',
-    message: 'Good news! Our team has manually approved your document.',
+    label: "Approved",
+    color: "bg-green-100 text-green-800 border-green-200",
+    message: "Verification approved by administrator.",
+    theme: "green",
   },
   denied: {
-    label: 'Denied',
-    color: 'bg-red-600',
-    message: 'Unfortunately, your document was denied after manual review.',
+    label: "Admin Denied",
+    color: "bg-red-100 text-red-800 border-red-200",
+    message: "Verification denied after manual review.",
+    theme: "red",
   },
 };
