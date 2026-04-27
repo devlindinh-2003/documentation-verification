@@ -1,9 +1,15 @@
-import { Injectable, Logger, Inject, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  Inject,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import { DRIZZLE } from '../db/db.module';
-import { notifications, verificationRecords } from '../db/schema';
+import { DRIZZLE } from '../../database/db.module';
+import { notifications, verificationRecords } from '../../database/schema';
 import { eq, and, desc, count } from 'drizzle-orm';
 
 @Injectable()
@@ -51,15 +57,17 @@ export class NotificationService {
       .select()
       .from(notifications)
       .where(eq(notifications.userId, data.userId));
-    
+
     const duplicate = existing.find(
-      (n: any) => 
-        n.metadata.recordId === data.metadata.recordId && 
-        n.metadata.status === data.metadata.status
+      (n: any) =>
+        n.metadata.recordId === data.metadata.recordId &&
+        n.metadata.status === data.metadata.status,
     );
 
     if (duplicate) {
-      this.logger.log(`Notification already exists for record ${data.metadata.recordId} and status ${data.metadata.status}`);
+      this.logger.log(
+        `Notification already exists for record ${data.metadata.recordId} and status ${data.metadata.status}`,
+      );
       return duplicate;
     }
 
@@ -91,8 +99,10 @@ export class NotificationService {
     const [result] = await this.db
       .select({ count: count() })
       .from(notifications)
-      .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
-    
+      .where(
+        and(eq(notifications.userId, userId), eq(notifications.isRead, false)),
+      );
+
     return result.count;
   }
 
@@ -129,7 +139,9 @@ export class NotificationService {
         isRead: true,
         readAt: new Date(),
       })
-      .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)))
+      .where(
+        and(eq(notifications.userId, userId), eq(notifications.isRead, false)),
+      )
       .returning();
   }
 }

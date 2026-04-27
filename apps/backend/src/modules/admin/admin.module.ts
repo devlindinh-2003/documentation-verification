@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
-import { DocumentVerificationModule } from '../document-verification/document-verification.module';
+import { VerificationModule } from '../verification/verification.module';
 
 @Module({
-  imports: [DocumentVerificationModule],
+  imports: [VerificationModule],
   controllers: [AdminController],
   providers: [AdminService],
 })

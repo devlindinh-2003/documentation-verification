@@ -12,7 +12,9 @@ async function seed() {
   // STEP 0: ENVIRONMENT CHECK
   const nodeEnv = process.env.NODE_ENV || 'development';
   if (nodeEnv === 'production') {
-    console.error('❌ ERROR: This script CANNOT be run in production environment!');
+    console.error(
+      '❌ ERROR: This script CANNOT be run in production environment!',
+    );
     process.exit(1);
   }
 
@@ -21,7 +23,9 @@ async function seed() {
     throw new Error('DATABASE_URL is not defined in environment variables');
   }
 
-  console.log(`⏳ Starting database reset and seed in ${nodeEnv} environment...`);
+  console.log(
+    `⏳ Starting database reset and seed in ${nodeEnv} environment...`,
+  );
 
   const pool = new Pool({
     connectionString,
@@ -32,11 +36,13 @@ async function seed() {
   try {
     // STEP 1: CLEAR DATABASE (Truncate all tables with CASCADE)
     console.log('🗑️ Clearing existing data...');
-    
+
     // We use raw SQL to truncate all tables in the correct order or with CASCADE
     // This preserves the schema structure while removing all records.
-    await db.execute(sql`TRUNCATE TABLE audit_events, notifications, verification_records, users RESTART IDENTITY CASCADE`);
-    
+    await db.execute(
+      sql`TRUNCATE TABLE audit_events, notifications, verification_records, users RESTART IDENTITY CASCADE`,
+    );
+
     console.log('✅ Data cleared successfully');
 
     // STEP 2 & 3: SEED DEFAULT USERS (with hashed passwords)
@@ -67,7 +73,6 @@ async function seed() {
     console.log('✅ Default users seeded successfully');
     console.log(`   - Seller: seller@example.com (ID: ${SELLER_ID})`);
     console.log(`   - Admin: admin@example.com (ID: ${ADMIN_ID})`);
-
   } catch (error) {
     console.error('❌ Seeding failed:', error);
     process.exit(1);

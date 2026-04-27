@@ -40,7 +40,7 @@ export class StorageService {
     // but getMetadata is not available in the public JS SDK as a single call always.
     // However, we can use info or just try to get the public URL/signed URL to check existence.
     // Actually, data from list will contain the file if it exists.
-    
+
     // Better way to get specific file info:
     const { data: fileData, error: fileError } = await this.supabase.storage
       .from(this.bucket)

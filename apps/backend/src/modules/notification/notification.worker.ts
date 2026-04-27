@@ -1,8 +1,8 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { Logger, Injectable, Inject } from '@nestjs/common';
-import { DRIZZLE } from '../db/db.module';
-import { verificationRecords, users } from '../db/schema';
+import { DRIZZLE } from '../../database/db.module';
+import { verificationRecords, users } from '../../database/schema';
 import { eq } from 'drizzle-orm';
 import { NotificationService } from './notification.service';
 
@@ -28,7 +28,7 @@ export class NotificationWorker extends WorkerHost {
       .select()
       .from(users)
       .where(eq(users.id, sellerId));
-    
+
     if (!seller) {
       this.logger.warn(`Seller not found: ${sellerId}`);
       return;

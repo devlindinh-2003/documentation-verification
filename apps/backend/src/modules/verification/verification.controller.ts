@@ -9,15 +9,13 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import { UploadUrlDto } from './dto/upload-url.dto';
 import { ConfirmUploadDto } from './dto/confirm-upload.dto';
-import { DocumentVerificationService } from './document-verification.service';
-import { Roles } from '../auth/roles.decorator';
+import { VerificationService } from './verification.service';
+import { Roles } from '../../common/decorators/roles.decorator';
 
 @Controller('documents')
 @Roles('seller')
-export class DocumentVerificationController {
-  constructor(
-    private readonly verificationService: DocumentVerificationService,
-  ) {}
+export class VerificationController {
+  constructor(private readonly verificationService: VerificationService) {}
 
   @Throttle({ default: { limit: 5, ttl: 3600000 } })
   @Post('upload-url')

@@ -1,23 +1,19 @@
-import {
-  Injectable,
-  BadRequestException,
-  Inject,
-} from '@nestjs/common';
+import { Injectable, BadRequestException, Inject } from '@nestjs/common';
 import { StorageService } from '../storage/storage.service';
 import { StateMachineService } from './state-machine.service';
 import { UploadUrlDto } from './dto/upload-url.dto';
 import { randomUUID } from 'crypto';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import { DRIZZLE } from '../db/db.module';
-import { verificationRecords, users } from '../db/schema';
+import { DRIZZLE } from '../../database/db.module';
+import { verificationRecords, users } from '../../database/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 import { ConflictException } from '@nestjs/common';
 
 export const MAX_PENDING_DOCUMENTS = 5;
 
 @Injectable()
-export class DocumentVerificationService {
+export class VerificationService {
   constructor(
     private readonly stateMachine: StateMachineService,
     private readonly storageService: StorageService,

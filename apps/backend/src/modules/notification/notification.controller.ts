@@ -10,7 +10,7 @@ import {
   ParseIntPipe,
   DefaultValuePipe,
 } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { NotificationService } from './notification.service';
 
 @Controller('notifications')
@@ -42,7 +42,7 @@ export class NotificationController {
   async markAsRead(@Param('id') id: string, @Request() req: any) {
     return this.notificationService.markAsRead(id, req.user.id);
   }
-  
+
   @Post('mark-all-read')
   async markAllRead(@Request() req: any) {
     return this.notificationService.markAllRead(req.user.id);

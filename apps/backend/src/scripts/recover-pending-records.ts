@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../app.module';
-import { DRIZZLE } from '../db/db.module';
-import { verificationRecords } from '../db/schema';
+import { DRIZZLE } from '../database/db.module';
+import { verificationRecords } from '../database/schema';
 import { eq, and, lt } from 'drizzle-orm';
 import { Queue } from 'bullmq';
 import { getQueueToken } from '@nestjs/bullmq';

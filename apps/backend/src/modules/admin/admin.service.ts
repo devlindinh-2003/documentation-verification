@@ -5,10 +5,10 @@ import {
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
-import { DRIZZLE } from '../db/db.module';
-import { verificationRecords, auditEvents } from '../db/schema';
+import { DRIZZLE } from '../../database/db.module';
+import { verificationRecords, auditEvents } from '../../database/schema';
 import { eq, desc, asc, and, count } from 'drizzle-orm';
-import { StateMachineService } from '../document-verification/state-machine.service';
+import { StateMachineService } from '../verification/state-machine.service';
 import { StorageService } from '../storage/storage.service';
 import { DecisionDto } from './dto/decision.dto';
 
@@ -92,7 +92,9 @@ export class AdminService {
       // In a single-admin setup, we allow taking over the lock at any time.
       // The audit history will still track the state changes.
       if (record.lockedBy && record.lockedBy !== adminId) {
-        this.logger.log(`Admin ${adminId} is taking over lock from ${record.lockedBy}`);
+        this.logger.log(
+          `Admin ${adminId} is taking over lock from ${record.lockedBy}`,
+        );
       }
 
       const [updated] = await tx

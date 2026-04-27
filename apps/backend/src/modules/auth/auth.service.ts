@@ -5,8 +5,8 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { DRIZZLE } from '../db/db.module';
-import { users } from '../db/schema';
+import { DRIZZLE } from '../../database/db.module';
+import { users } from '../../database/schema';
 import { eq } from 'drizzle-orm';
 import * as argon2 from 'argon2';
 import { RegisterDto } from './dto/register.dto';

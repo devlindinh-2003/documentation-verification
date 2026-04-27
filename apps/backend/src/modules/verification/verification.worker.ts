@@ -17,7 +17,6 @@ export class VerificationWorker extends WorkerHost {
   }
 
   async process(job: Job<any, any, string>): Promise<any> {
-
     const {
       recordId,
       sellerId,
@@ -46,11 +45,13 @@ export class VerificationWorker extends WorkerHost {
         `[Job ${job.id}] Calling mock verification service for record ${recordId}`,
       );
       const mockResponse = await this.mockService.verifyDocument(documentKey);
-      
+
       const finalStatus = mockResponse.status.toLowerCase() as any;
       const eventType = this.mapStatusToEvent(mockResponse.status);
 
-      this.logger.log(`[Job ${job.id}] Mock service returned: ${finalStatus}. Transitioning...`);
+      this.logger.log(
+        `[Job ${job.id}] Mock service returned: ${finalStatus}. Transitioning...`,
+      );
       await this.stateMachine.transition(
         recordId,
         currentVersion + 1,

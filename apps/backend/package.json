@@ -19,10 +19,10 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx src/db/migrate.ts",
+    "db:migrate": "tsx src/database/migrate.ts",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio --port 4983",
-    "db:seed": "tsx src/db/seed.ts"
+    "db:seed": "tsx src/database/seed.ts"
   },
   "dependencies": {
     "@nestjs/bullmq": "^11.0.4",

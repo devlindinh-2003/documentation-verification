@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Param, Query, Req } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { DecisionDto } from './dto/decision.dto';
-import { Roles } from '../auth/roles.decorator';
+import { Roles } from '../../common/decorators/roles.decorator';
 
 @Controller('admin/verifications')
 @Roles('admin')

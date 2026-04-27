@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { AppModule } from './app.module';
-import { runMigrations } from './db/migrate';
+import { runMigrations } from './database/migrate';
 
 async function bootstrap() {
   // Run pending migrations before starting the server

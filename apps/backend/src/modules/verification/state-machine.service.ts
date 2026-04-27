@@ -4,8 +4,8 @@ import {
   ConflictException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { DRIZZLE } from '../db/db.module';
-import { verificationRecords, auditEvents } from '../db/schema';
+import { DRIZZLE } from '../../database/db.module';
+import { verificationRecords, auditEvents } from '../../database/schema';
 import { eq, and } from 'drizzle-orm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
