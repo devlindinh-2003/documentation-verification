@@ -5,7 +5,9 @@ import * as dotenv from 'dotenv';
 import * as path from 'path';
 
 // Load env before anything else
-dotenv.config();
+dotenv.config({
+  path: process.env.NODE_ENV === 'production' ? '.env.production' : '.env.local',
+});
 
 export async function runMigrations() {
   const connectionString = process.env.DATABASE_URL;

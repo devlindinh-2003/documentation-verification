@@ -6,7 +6,9 @@ import * as schema from './schema';
 import { sql } from 'drizzle-orm';
 
 // Load env before anything else
-dotenv.config();
+dotenv.config({
+  path: process.env.NODE_ENV === 'production' ? '.env.production' : '.env.local',
+});
 
 async function seed() {
   // STEP 0: ENVIRONMENT CHECK

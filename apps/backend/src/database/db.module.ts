@@ -1,4 +1,5 @@
 import { Global, Module } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as schema from './schema';
@@ -10,12 +11,10 @@ export const DRIZZLE = 'DRIZZLE';
   providers: [
     {
       provide: DRIZZLE,
-      useFactory: () => {
-        const pool = new Pool({
-          connectionString:
-            process.env.DATABASE_URL ||
-            'postgresql://postgres:postgres@localhost:5432/document_verification',
-        });
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => {
+        const connectionString = config.getOrThrow<string>('DATABASE_URL');
+        const pool = new Pool({ connectionString });
         return drizzle(pool, { schema });
       },
     },
