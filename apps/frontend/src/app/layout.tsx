@@ -6,6 +6,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useEffect } from 'react';
 import { Header } from '../components/Header';
 import { Roboto } from 'next/font/google';
+import { Toaster } from '../components/ui/sonner';
 import '../app/globals.css';
 
 const roboto = Roboto({
@@ -15,11 +16,7 @@ const roboto = Roboto({
   variable: '--font-roboto',
 });
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   const init = useAuth((state) => state.init);
 
   useEffect(() => {
@@ -31,9 +28,8 @@ export default function RootLayout({
       <body className={`${roboto.className} antialiased min-h-screen bg-slate-50 text-slate-900`}>
         <QueryClientProvider client={queryClient}>
           <Header />
-          <main>
-            {children}
-          </main>
+          <main>{children}</main>
+          <Toaster position="top-right" />
         </QueryClientProvider>
       </body>
     </html>

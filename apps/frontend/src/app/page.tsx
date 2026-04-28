@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "../hooks/useAuth";
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '../hooks/useAuth';
 
 export default function Home() {
   const { isAuthenticated, role, isInitialized } = useAuth();
@@ -12,13 +12,13 @@ export default function Home() {
     if (!isInitialized) return;
 
     if (!isAuthenticated) {
-      router.replace("/login");
-    } else if (role === "admin") {
-      router.replace("/admin");
-    } else if (role === "seller") {
-      router.replace("/seller");
+      router.replace('/login');
+    } else if (role === 'admin') {
+      router.replace('/admin');
+    } else if (role === 'seller') {
+      router.replace('/seller');
     } else {
-      router.replace("/login");
+      router.replace('/login');
     }
   }, [isAuthenticated, role, isInitialized, router]);
 

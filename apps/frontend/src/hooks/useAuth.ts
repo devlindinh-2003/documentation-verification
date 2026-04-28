@@ -1,23 +1,12 @@
-import { create } from "zustand";
-import { clearTokens, setTokens, getAccessToken } from "../lib/auth";
-import { jwtDecode } from "jwt-decode";
+import { jwtDecode } from 'jwt-decode';
+import { create } from 'zustand';
 
-interface User {
-  id: string;
-  email: string;
-  role: "seller" | "admin";
-}
-
-interface JWTPayload {
-  sub: string;
-  email: string;
-  role: "seller" | "admin";
-  exp: number;
-}
+import { clearTokens, getAccessToken, setTokens } from '../lib/auth';
+import { AuthRole, JWTPayload, User } from '../types';
 
 interface AuthState {
   user: User | null;
-  role: "seller" | "admin" | null;
+  role: AuthRole | null;
   isAuthenticated: boolean;
   isInitialized: boolean;
   login: (accessToken: string, refreshToken: string) => void;
@@ -32,6 +21,10 @@ export const useAuth = create<AuthState>((set) => ({
   isInitialized: false,
 
   login: (accessToken: string, refreshToken: string) => {
+    if (!accessToken) {
+      console.error('Login failed: Access token is missing');
+      return;
+    }
     setTokens(accessToken, refreshToken);
     try {
       const decoded = jwtDecode<JWTPayload>(accessToken);
@@ -42,20 +35,20 @@ export const useAuth = create<AuthState>((set) => ({
       };
       set({ user, role: user.role, isAuthenticated: true });
     } catch (e) {
-      console.error("Failed to parse token", e);
+      console.error('Failed to parse token', e);
     }
   },
 
   logout: () => {
     clearTokens();
     set({ user: null, role: null, isAuthenticated: false });
-    if (typeof window !== "undefined") {
-      window.location.href = "/login";
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login';
     }
   },
 
   init: () => {
-    if (typeof window === "undefined") {
+    if (typeof window === 'undefined') {
       set({ isInitialized: true });
       return;
     }
@@ -88,7 +81,7 @@ export const useAuth = create<AuthState>((set) => ({
           });
         }
       } catch (e) {
-        console.error("Auth initialization failed", e);
+        console.error('Auth initialization failed', e);
         clearTokens();
         set({
           user: null,

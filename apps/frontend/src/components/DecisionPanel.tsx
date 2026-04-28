@@ -1,38 +1,26 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import {
-  Check,
-  X,
-  AlertCircle,
-  MessageSquare,
-  Loader2,
-  ShieldCheck,
-  ShieldX,
-} from "lucide-react";
+import { useState } from 'react';
+import { mapErrorToMessage } from '../lib/error-messages';
+import { Check, X, AlertCircle, MessageSquare, Loader2, ShieldCheck, ShieldX } from 'lucide-react';
 
 interface DecisionPanelProps {
-  onSubmit: (decision: "approved" | "denied", reason: string) => Promise<void>;
+  onSubmit: (decision: 'approved' | 'denied', reason: string) => Promise<void>;
   disabled?: boolean;
 }
 
 export function DecisionPanel({ onSubmit, disabled }: DecisionPanelProps) {
-  const [reason, setReason] = useState("");
-  const [error, setError] = useState("");
-  const [submitting, setSubmitting] = useState<"approved" | "denied" | null>(
-    null,
-  );
+  const [reason, setReason] = useState('');
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState<'approved' | 'denied' | null>(null);
 
-  const handleSubmit = async (decision: "approved" | "denied") => {
-    setError("");
+  const handleSubmit = async (decision: 'approved' | 'denied') => {
+    setError('');
     setSubmitting(decision);
     try {
       await onSubmit(decision, reason);
     } catch (err: unknown) {
-      const axiosError = err as { response?: { data?: { message?: string } } };
-      setError(
-        axiosError.response?.data?.message || "Failed to submit decision",
-      );
+      setError(mapErrorToMessage(err));
     } finally {
       setSubmitting(null);
     }
@@ -74,11 +62,11 @@ export function DecisionPanel({ onSubmit, disabled }: DecisionPanelProps) {
 
         <div className="flex flex-col sm:flex-row gap-3 pt-2">
           <button
-            onClick={() => handleSubmit("denied")}
+            onClick={() => handleSubmit('denied')}
             disabled={disabled || submitting !== null}
             className="flex-1 group relative flex items-center justify-center gap-2 px-6 py-4 bg-white border-2 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-600 font-bold uppercase tracking-tighter text-xs rounded-2xl transition-all duration-200 disabled:opacity-50 overflow-hidden"
           >
-            {submitting === "denied" ? (
+            {submitting === 'denied' ? (
               <Loader2 className="animate-spin" size={18} strokeWidth={3} />
             ) : (
               <>
@@ -93,11 +81,11 @@ export function DecisionPanel({ onSubmit, disabled }: DecisionPanelProps) {
           </button>
 
           <button
-            onClick={() => handleSubmit("approved")}
+            onClick={() => handleSubmit('approved')}
             disabled={disabled || submitting !== null}
             className="flex-1 group relative flex items-center justify-center gap-2 px-6 py-4 bg-primary text-white font-bold uppercase tracking-tighter text-xs rounded-2xl shadow-lg shadow-primary/20 hover:bg-primary/90 hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:translate-y-0 overflow-hidden"
           >
-            {submitting === "approved" ? (
+            {submitting === 'approved' ? (
               <Loader2 className="animate-spin" size={18} strokeWidth={3} />
             ) : (
               <>

@@ -82,3 +82,5 @@ coverage/
 # Ignore local database or mock storage if applicable
 *.db
 *.sqlite
+# Local maintenance scripts
+apps/backend/src/scripts/

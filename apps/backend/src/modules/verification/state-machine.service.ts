@@ -118,11 +118,7 @@ export class StateMachineService {
         metadata,
       });
 
-      if (
-        ['verified', 'rejected', 'approved', 'denied', 'inconclusive'].includes(
-          toStatus,
-        )
-      ) {
+      if (['verified', 'rejected', 'approved', 'denied', 'inconclusive'].includes(toStatus)) {
         this.eventEmitter.emit('verification.finalised', updatedRecord);
       }
 
@@ -142,9 +138,7 @@ export class StateMachineService {
     };
 
     if (!validTransitions[from]?.includes(to)) {
-      throw new UnprocessableEntityException(
-        `Invalid state transition from ${from} to ${to}`,
-      );
+      throw new UnprocessableEntityException(`Invalid state transition from ${from} to ${to}`);
     }
   }
 }

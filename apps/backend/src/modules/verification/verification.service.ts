@@ -24,8 +24,7 @@ export class VerificationService {
   async generateUploadUrl(dto: UploadUrlDto) {
     const documentKey = `${randomUUID()}-${dto.fileName}`;
 
-    const { signedUrl, token } =
-      await this.storageService.createSignedUploadUrl(documentKey);
+    const { signedUrl, token } = await this.storageService.createSignedUploadUrl(documentKey);
 
     return {
       uploadUrl: signedUrl,
@@ -34,10 +33,7 @@ export class VerificationService {
     };
   }
 
-  async confirmUploadAndStartVerification(
-    documentKey: string,
-    sellerId: string,
-  ) {
+  async confirmUploadAndStartVerification(documentKey: string, sellerId: string) {
     const result = await this.db.transaction(async (tx: any) => {
       // 1. Lock the user row to serialize verification requests for this seller
       // This prevents race conditions where multiple parallel uploads could bypass the limit
@@ -55,9 +51,7 @@ export class VerificationService {
         );
 
       if (activeRecords.length >= MAX_PENDING_DOCUMENTS) {
-        throw new ConflictException(
-          `Maximum ${MAX_PENDING_DOCUMENTS} pending documents reached`,
-        );
+        throw new ConflictException(`Maximum ${MAX_PENDING_DOCUMENTS} pending documents reached`);
       }
 
       const metadata = await this.storageService.getFileMetadata(documentKey);
@@ -69,9 +63,7 @@ export class VerificationService {
         throw new BadRequestException('Document exceeds 10MB limit');
       }
 
-      if (
-        !['application/pdf', 'image/jpeg', 'image/png'].includes(metadata.mime)
-      ) {
+      if (!['application/pdf', 'image/jpeg', 'image/png'].includes(metadata.mime)) {
         throw new BadRequestException('Invalid MIME type');
       }
 

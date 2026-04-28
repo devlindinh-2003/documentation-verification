@@ -1,51 +1,7 @@
 import axios from 'axios';
-import { getToken, getRefreshToken, setTokens, clearTokens } from './auth';
-import { VerificationStatus } from './status-config';
 import { useAuth } from '../hooks/useAuth';
-
-export interface VerificationRecord {
-  id: string;
-  status: VerificationStatus;
-  sellerId: string;
-  externalJobId?: string | null;
-  documentKey: string;
-  version: number;
-  createdAt: string;
-  updatedAt: string;
-  lockedBy?: string | null;
-  lockedAt?: string | null;
-}
-
-export interface AuditEvent {
-  id: string;
-  actorId: string;
-  actorRole: string;
-  eventType: string;
-  fromStatus: string;
-  toStatus: string;
-  metadata?: Record<string, unknown>;
-  createdAt: string;
-}
-
-export interface Notification {
-  id: string;
-  userId: string;
-  title: string;
-  body: string;
-  type: 'VERIFICATION_RESULT';
-  isRead: boolean;
-  readAt: string | null;
-  metadata: {
-    recordId: string;
-    status: VerificationStatus;
-  };
-  createdAt: string;
-}
-
-export interface PaginatedResult<T> {
-  data: T[];
-  total: number;
-}
+import { ApiError } from '../types/api';
+import { clearTokens, getRefreshToken, getToken, setTokens } from './auth';
 
 export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
@@ -60,10 +16,10 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
-// Response interceptor to handle 401s and token refresh
+// Response interceptor to handle 401s, token refresh, and error normalization
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -85,22 +41,36 @@ api.interceptors.response.use(
             refreshToken,
           });
 
-          if (res?.data?.accessToken) {
-            setTokens(res.data.accessToken, res.data.refreshToken || refreshToken);
-            originalRequest.headers.Authorization = `Bearer ${res.data.accessToken}`;
+          if (res?.data?.access_token) {
+            setTokens(res.data.access_token, res.data.refresh_token || refreshToken);
+            originalRequest.headers.Authorization = `Bearer ${res.data.access_token}`;
             return api(originalRequest);
           }
         } catch (refreshError) {
           // Use global auth state to logout and redirect
           useAuth.getState().logout();
-          return Promise.reject(refreshError);
+          return Promise.reject({
+            statusCode: 401,
+            message: 'Session expired',
+          } as ApiError);
         }
       } else {
         // No refresh token available, logout and redirect
         useAuth.getState().logout();
+        return Promise.reject({
+          statusCode: 401,
+          message: 'Please log in again',
+        } as ApiError);
       }
     }
 
-    return Promise.reject(error);
-  }
+    // Normalize error object
+    const normalizedError: ApiError = {
+      statusCode: error?.response?.status || 0,
+      message: error?.response?.data?.message || 'Network error',
+      error: error?.response?.data?.error || 'Unknown error',
+    };
+
+    return Promise.reject(normalizedError);
+  },
 );

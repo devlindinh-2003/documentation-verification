@@ -1,78 +1,58 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { api, PaginatedResult, VerificationRecord } from "../../lib/api";
-import { useAuth } from "../../hooks/useAuth";
-import { useRouter } from "next/navigation";
-import { AdminTable } from "../../components/AdminTable";
-import {
-  LayoutGrid,
-  ListFilter,
-  Users,
-  Clock,
-  AlertTriangle,
-  CheckCircle2,
-} from "lucide-react";
+import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { verificationService } from '../../services/verification.service';
+import { useAuth } from '../../hooks/useAuth';
+import { useRouter } from 'next/navigation';
+import { AdminTable } from '../../components/AdminTable';
+import { LayoutGrid, Users, Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { VerificationRecord, ApiResponse, PaginatedResult } from '../../types';
 
 export default function AdminPage() {
   const { isAuthenticated, role, isInitialized } = useAuth();
   const router = useRouter();
 
-  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>('');
 
   useEffect(() => {
     if (!isInitialized) return;
 
     if (!isAuthenticated) {
-      router.push("/login");
-    } else if (role !== "admin") {
-      router.push("/seller");
+      router.push('/login');
+    } else if (role !== 'admin') {
+      router.push('/seller');
     }
   }, [isInitialized, isAuthenticated, role, router]);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["admin-verifications", statusFilter],
-    queryFn: async () => {
-      const { data } = await api.get<PaginatedResult<VerificationRecord>>(
-        "/admin/verifications",
-        {
-          params: { status: statusFilter || undefined, limit: 50, offset: 0 },
-        },
-      );
-      return data;
-    },
-    enabled: isAuthenticated && role === "admin",
+  const { data: verificationsResponse, isLoading } = useQuery<
+    ApiResponse<PaginatedResult<VerificationRecord>>
+  >({
+    queryKey: ['admin-verifications', statusFilter],
+    queryFn: () => verificationService.getAdminVerifications({ status: statusFilter }),
+    enabled: isAuthenticated && role === 'admin',
     refetchInterval: 10000,
   });
 
+  const data = verificationsResponse?.data;
+
   // Fetch stats (simplified for now by using the full list, in real app would be separate endpoint)
-  const { data: allRecords } = useQuery({
-    queryKey: ["admin-stats"],
-    queryFn: async () => {
-      const { data } = await api.get<PaginatedResult<VerificationRecord>>(
-        "/admin/verifications",
-        {
-          params: { limit: 100, offset: 0 },
-        },
-      );
-      return data.data;
-    },
-    enabled: isAuthenticated && role === "admin",
+  const { data: allRecordsResponse } = useQuery<ApiResponse<PaginatedResult<VerificationRecord>>>({
+    queryKey: ['admin-stats'],
+    queryFn: () => verificationService.getAdminVerifications({ limit: 100 }),
+    enabled: isAuthenticated && role === 'admin',
   });
 
+  const allRecords = allRecordsResponse?.data?.data || [];
+
   const stats = {
-    total: allRecords?.length || 0,
-    pending: allRecords?.filter((r) => r.status === "pending").length || 0,
-    processing:
-      allRecords?.filter((r) => r.status === "processing").length || 0,
-    inconclusive:
-      allRecords?.filter((r) => r.status === "inconclusive").length || 0,
+    total: allRecords.length,
+    pending: allRecords.filter((r) => r.status === 'pending').length,
+    processing: allRecords.filter((r) => r.status === 'processing').length,
+    inconclusive: allRecords.filter((r) => r.status === 'inconclusive').length,
   };
 
-  if (!isInitialized || !isAuthenticated || role !== "admin") return null;
-
-  console.log("data", data);
+  if (!isInitialized || !isAuthenticated || role !== 'admin') return null;
 
   return (
     <div className="min-h-screen bg-slate-50/50 pt-24 pb-20 px-4 sm:px-6 lg:px-8">
@@ -96,32 +76,32 @@ export default function AdminPage() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 w-full md:w-auto">
             {[
               {
-                label: "Total",
+                label: 'Total',
                 value: stats.total,
                 icon: Users,
-                color: "text-blue-600",
-                bg: "bg-blue-50",
+                color: 'text-blue-600',
+                bg: 'bg-blue-50',
               },
               {
-                label: "Pending",
+                label: 'Pending',
                 value: stats.pending,
                 icon: Clock,
-                color: "text-slate-600",
-                bg: "bg-slate-100",
+                color: 'text-slate-600',
+                bg: 'bg-slate-100',
               },
               {
-                label: "Processing",
+                label: 'Processing',
                 value: stats.processing,
                 icon: CheckCircle2,
-                color: "text-green-600",
-                bg: "bg-green-50",
+                color: 'text-green-600',
+                bg: 'bg-green-50',
               },
               {
-                label: "Review",
+                label: 'Review',
                 value: stats.inconclusive,
                 icon: AlertTriangle,
-                color: "text-amber-600",
-                bg: "bg-amber-50",
+                color: 'text-amber-600',
+                bg: 'bg-amber-50',
               },
             ].map((stat) => (
               <div
@@ -151,18 +131,18 @@ export default function AdminPage() {
           <div className="p-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-4 bg-slate-50/30">
             <div className="flex items-center bg-white p-1 rounded-xl border border-slate-200/60 shadow-sm">
               {[
-                { id: "", label: "All Requests" },
-                { id: "inconclusive", label: "Needs Review" },
-                { id: "pending", label: "Pending" },
-                { id: "processing", label: "Processing" },
+                { id: '', label: 'All Requests' },
+                { id: 'inconclusive', label: 'Needs Review' },
+                { id: 'pending', label: 'Pending' },
+                { id: 'processing', label: 'Processing' },
               ].map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setStatusFilter(tab.id)}
                   className={`px-4 py-2 text-xs font-black uppercase tracking-tighter rounded-lg transition-all duration-200 ${
                     statusFilter === tab.id
-                      ? "bg-primary text-white shadow-md shadow-primary/20 scale-[1.02]"
-                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                      ? 'bg-primary text-white shadow-md shadow-primary/20 scale-[1.02]'
+                      : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
                   }`}
                 >
                   {tab.label}

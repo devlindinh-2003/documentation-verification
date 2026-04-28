@@ -1,25 +1,27 @@
-"use client";
+'use client';
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, AuditEvent, VerificationRecord } from "../../../lib/api";
-import { useAuth } from "../../../hooks/useAuth";
-import { useRouter, useParams } from "next/navigation";
-import { useEffect, useState } from "react";
-import { AuditTimeline } from "../../../components/AuditTimeline";
-import { DecisionPanel } from "../../../components/DecisionPanel";
-import { StatusBadge } from "../../../components/StatusBadge";
-import { format } from "date-fns";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { verificationService } from '../../../services/verification.service';
+import { useAuth } from '../../../hooks/useAuth';
+import { useRouter, useParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { AuditTimeline } from '../../../components/AuditTimeline';
+import { DecisionPanel } from '../../../components/DecisionPanel';
+import { StatusBadge } from '../../../components/StatusBadge';
+import { format } from 'date-fns';
+import { toast } from 'sonner';
 import {
   ArrowLeft,
   FileText,
-  Lock,
   ShieldAlert,
-  User,
   Calendar,
   ExternalLink,
   RefreshCcw,
-} from "lucide-react";
-import Link from "next/link";
+  Lock,
+} from 'lucide-react';
+import { VerificationRecord, AuditEvent, ApiError, ApiResponse } from '../../../types';
+import { mapErrorToMessage } from '../../../lib/error-messages';
+import { api } from '../../../lib/api'; // Keep for document preview if not moved to service
 
 export default function AdminRecordPage() {
   const { isAuthenticated, role, user, isInitialized } = useAuth();
@@ -33,99 +35,79 @@ export default function AdminRecordPage() {
     if (!isInitialized) return;
 
     if (!isAuthenticated) {
-      router.push("/login");
-    } else if (role !== "admin") {
-      router.push("/seller");
+      router.push('/login');
+    } else if (role !== 'admin') {
+      router.push('/seller');
     }
   }, [isInitialized, isAuthenticated, role, router]);
 
   const {
-    data: record,
+    data: recordResponse,
     isLoading: loadingRecord,
     refetch: refetchRecord,
-  } = useQuery({
-    queryKey: ["admin-verification", id],
-    queryFn: async () => {
-      const { data } = await api.get<VerificationRecord>(
-        `/admin/verifications/${id}`,
-      );
-      return data;
-    },
-    enabled: !!id && isAuthenticated && role === "admin",
+  } = useQuery<ApiResponse<VerificationRecord>>({
+    queryKey: ['admin-verification', id],
+    queryFn: () =>
+      api.get<VerificationRecord>(`/admin/verifications/${id}`).then((res) => ({ data: res.data })),
+    enabled: !!id && isAuthenticated && role === 'admin',
     retry: false,
   });
 
-  const { data: history, isLoading: loadingHistory } = useQuery({
-    queryKey: ["admin-history", id],
-    queryFn: async () => {
-      const { data } = await api.get<AuditEvent[]>(
-        `/admin/verifications/${id}/history`,
-      );
-      return data;
-    },
-    enabled: !!id && isAuthenticated && role === "admin",
+  const record = recordResponse?.data;
+
+  const { data: historyResponse, isLoading: loadingHistory } = useQuery<ApiResponse<AuditEvent[]>>({
+    queryKey: ['admin-history', id],
+    queryFn: () =>
+      api
+        .get<AuditEvent[]>(`/admin/verifications/${id}/history`)
+        .then((res) => ({ data: res.data })),
+    enabled: !!id && isAuthenticated && role === 'admin',
   });
 
-  const { data: documentData, isLoading: loadingDoc } = useQuery({
-    queryKey: ["admin-document", id],
-    queryFn: async () => {
-      const { data } = await api.get<{ url: string }>(
-        `/admin/verifications/${id}/document`,
-      );
-      return data;
-    },
-    enabled: !!id && isAuthenticated && role === "admin",
+  const history = historyResponse?.data;
+
+  const { data: documentResponse, isLoading: loadingDoc } = useQuery<ApiResponse<{ url: string }>>({
+    queryKey: ['admin-document', id],
+    queryFn: () =>
+      api
+        .get<{ url: string }>(`/admin/verifications/${id}/document`)
+        .then((res) => ({ data: res.data })),
+    enabled: !!id && isAuthenticated && role === 'admin',
   });
+
+  const documentData = documentResponse?.data;
 
   const claimMutation = useMutation({
-    mutationFn: async () => {
-      const { data } = await api.post<VerificationRecord>(
-        `/admin/verifications/${id}/claim`,
-      );
-      return data;
-    },
+    mutationFn: () => verificationService.claimRecord(id, record?.version ?? 1),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-verification", id] });
+      queryClient.invalidateQueries({ queryKey: ['admin-verification', id] });
     },
   });
 
   const decisionMutation = useMutation({
-    mutationFn: async ({
-      decision,
-      reason,
-    }: {
-      decision: "approved" | "denied";
-      reason: string;
-    }) => {
-      const version = record?.version || 1;
-      const { data } = await api.post<VerificationRecord>(
-        `/admin/verifications/${id}/decision`,
-        {
-          decision,
-          reason,
-          version,
-        },
-      );
-      return data;
-    },
-    onSuccess: () => {
+    mutationFn: (params: { decision: 'approved' | 'denied'; reason: string }) =>
+      verificationService.submitDecision(id, {
+        ...params,
+        version: record?.version ?? 1,
+      }),
+    onSuccess: (_, variables) => {
       setConflictError(false);
-      queryClient.invalidateQueries({ queryKey: ["admin-verification", id] });
-      queryClient.invalidateQueries({ queryKey: ["admin-history", id] });
+      toast.success(`Identity ${variables.decision} successfully`);
+      queryClient.invalidateQueries({ queryKey: ['admin-verification', id] });
+      queryClient.invalidateQueries({ queryKey: ['admin-history', id] });
     },
-    onError: (error: unknown) => {
-      const axiosError = error as { response?: { status?: number } };
-      if (axiosError?.response?.status === 409) {
+    onError: (error: ApiError) => {
+      if (error.statusCode === 409) {
         setConflictError(true);
-        queryClient.invalidateQueries({ queryKey: ["admin-verification", id] });
-        queryClient.invalidateQueries({ queryKey: ["admin-history", id] });
+        queryClient.invalidateQueries({ queryKey: ['admin-verification', id] });
+        queryClient.invalidateQueries({ queryKey: ['admin-history', id] });
       } else {
-        throw error;
+        toast.error(mapErrorToMessage(error));
       }
     },
   });
 
-  if (!isInitialized || !isAuthenticated || role !== "admin") return null;
+  if (!isInitialized || !isAuthenticated || role !== 'admin') return null;
 
   const handleClaim = () => {
     claimMutation.mutate();
@@ -152,16 +134,13 @@ export default function AdminRecordPage() {
             <ShieldAlert size={40} />
           </div>
           <div className="space-y-2">
-            <h2 className="text-xl font-black text-slate-900">
-              Record Not Found
-            </h2>
+            <h2 className="text-xl font-black text-slate-900">Record Not Found</h2>
             <p className="text-sm text-slate-500">
-              The verification request you are looking for does not exist or has
-              been deleted.
+              The verification request you are looking for does not exist or has been deleted.
             </p>
           </div>
           <button
-            onClick={() => router.push("/admin")}
+            onClick={() => router.push('/admin')}
             className="w-full py-4 bg-slate-900 text-white font-black uppercase tracking-tighter text-xs rounded-2xl hover:bg-slate-800 transition-all"
           >
             Return to Queue
@@ -173,9 +152,7 @@ export default function AdminRecordPage() {
 
   const isLockedByMe = record?.lockedBy === user?.id;
   const isLockedByOther = record?.lockedBy && !isLockedByMe;
-  const isTerminal = ["verified", "rejected", "approved", "denied"].includes(
-    record?.status || "",
-  );
+  const isTerminal = ['verified', 'rejected', 'approved', 'denied'].includes(record?.status || '');
 
   return (
     <div className="min-h-screen bg-slate-50/50 pt-24 pb-20 px-4 sm:px-6 lg:px-8">
@@ -184,7 +161,7 @@ export default function AdminRecordPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => router.push("/admin")}
+              onClick={() => router.push('/admin')}
               className="w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-500 hover:text-primary hover:border-primary transition-all shadow-sm"
             >
               <ArrowLeft size={20} strokeWidth={2.5} />
@@ -208,7 +185,7 @@ export default function AdminRecordPage() {
                   Created At
                 </p>
                 <p className="text-sm font-bold text-slate-900">
-                  {format(new Date(record.createdAt), "MMM d, HH:mm")}
+                  {format(new Date(record.createdAt), 'MMM d, HH:mm')}
                 </p>
               </div>
               <Calendar size={20} className="text-slate-300" />
@@ -219,7 +196,7 @@ export default function AdminRecordPage() {
                 disabled={claimMutation.isPending}
                 className="px-6 py-2.5 bg-amber-600 text-white text-xs font-black uppercase tracking-tighter rounded-xl shadow-lg shadow-amber-200 transition hover:bg-amber-700 disabled:opacity-50"
               >
-                {claimMutation.isPending ? "Processing..." : "Take Over Review"}
+                {claimMutation.isPending ? 'Processing...' : 'Take Over Review'}
               </button>
             )}
           </div>
@@ -232,17 +209,14 @@ export default function AdminRecordPage() {
             {/* Conflict Alert */}
             {conflictError && (
               <div className="p-6 bg-red-50 border-2 border-red-200 rounded-3xl flex items-start gap-4 animate-in shake duration-500">
-                <ShieldAlert
-                  size={24}
-                  className="text-red-600 shrink-0 mt-0.5"
-                />
+                <ShieldAlert size={24} className="text-red-600 shrink-0 mt-0.5" />
                 <div className="space-y-1">
                   <h4 className="text-sm font-black text-red-900 uppercase tracking-tighter">
                     Concurrent Update Detected
                   </h4>
                   <p className="text-sm text-red-700 font-medium">
-                    This record was modified by another administrator. We've
-                    refreshed the data to ensure accuracy.
+                    This record was modified by another administrator. We've refreshed the data to
+                    ensure accuracy.
                   </p>
                   <button
                     onClick={() => {
@@ -286,9 +260,7 @@ export default function AdminRecordPage() {
                 ) : (
                   <div className="flex flex-col items-center gap-4 text-slate-400">
                     <ShieldAlert size={64} strokeWidth={1} />
-                    <p className="font-bold">
-                      Preview is currently unavailable
-                    </p>
+                    <p className="font-bold">Preview is currently unavailable</p>
                   </div>
                 )}
               </div>
@@ -297,9 +269,8 @@ export default function AdminRecordPage() {
 
           {/* Right Column: Seller Info & Actions */}
           <div className="lg:col-span-4 space-y-8">
-
             {/* Decision Logic */}
-            {record?.status === "inconclusive" && !isTerminal && (
+            {record?.status === 'inconclusive' && !isTerminal && (
               <div className="space-y-4">
                 {!record?.lockedBy ? (
                   <div className="bg-white p-8 rounded-3xl border-2 border-dashed border-primary/20 text-center space-y-6">
@@ -307,12 +278,10 @@ export default function AdminRecordPage() {
                       <Lock size={32} />
                     </div>
                     <div className="space-y-2">
-                      <h3 className="text-lg font-black text-slate-900">
-                        Claim to Review
-                      </h3>
+                      <h3 className="text-lg font-black text-slate-900">Claim to Review</h3>
                       <p className="text-sm text-slate-500">
-                        You must lock this record to yourself before you can
-                        submit a final decision.
+                        You must lock this record to yourself before you can submit a final
+                        decision.
                       </p>
                     </div>
                     <button
@@ -320,9 +289,7 @@ export default function AdminRecordPage() {
                       disabled={claimMutation.isPending}
                       className="w-full py-4 bg-primary text-white text-xs font-black uppercase tracking-widest rounded-2xl shadow-lg shadow-primary/20 hover:bg-primary/90 transition disabled:opacity-50"
                     >
-                      {claimMutation.isPending
-                        ? "Claiming Record..."
-                        : "Start Review Process"}
+                      {claimMutation.isPending ? 'Claiming Record...' : 'Start Review Process'}
                     </button>
                   </div>
                 ) : isLockedByMe ? (

@@ -3,6 +3,7 @@
 import { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload, File, X, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { mapErrorToMessage } from '../lib/error-messages';
 
 interface UploadDropzoneProps {
   onUpload: (file: File) => Promise<void>;
@@ -47,8 +48,7 @@ export function UploadDropzone({ onUpload, disabled, disabledMessage }: UploadDr
       setSuccess(true);
       setFile(null);
     } catch (err: unknown) {
-      const axiosError = err as { response?: { data?: { message?: string } } };
-      setError(axiosError.response?.data?.message || 'Failed to upload document. Please try again.');
+      setError(mapErrorToMessage(err));
     } finally {
       setUploading(false);
     }
@@ -80,7 +80,7 @@ export function UploadDropzone({ onUpload, disabled, disabledMessage }: UploadDr
         `}
       >
         <input {...getInputProps()} />
-        
+
         <div className="p-10 flex flex-col items-center text-center">
           {file ? (
             <div className="flex flex-col items-center space-y-4 animate-in fade-in zoom-in duration-300">
@@ -101,7 +101,10 @@ export function UploadDropzone({ onUpload, disabled, disabledMessage }: UploadDr
           ) : (
             <>
               <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all duration-300">
-                <Upload className="text-slate-400 group-hover:text-white transition-colors" size={32} />
+                <Upload
+                  className="text-slate-400 group-hover:text-white transition-colors"
+                  size={32}
+                />
               </div>
               <div className="space-y-2">
                 <p className="text-base font-semibold text-slate-900">
@@ -152,7 +155,9 @@ export function UploadDropzone({ onUpload, disabled, disabledMessage }: UploadDr
       {success && (
         <div className="p-4 bg-green-50 border border-green-100 rounded-2xl flex items-center gap-3 text-green-700 animate-in slide-in-from-top-2 duration-300">
           <CheckCircle2 size={20} className="text-green-500" />
-          <span className="text-sm font-semibold">Document submitted successfully! Reviewing now...</span>
+          <span className="text-sm font-semibold">
+            Document submitted successfully! Reviewing now...
+          </span>
         </div>
       )}
 

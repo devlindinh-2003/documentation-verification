@@ -7,8 +7,14 @@
     "packages/*"
   ],
   "scripts": {
+    "dev": "concurrently \"npm run start:dev --workspace=backend\" \"npm run dev --workspace=frontend\"",
     "build": "npm run build --workspaces --if-present",
     "start": "npm run start --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present"
+    "test": "npm run test --workspaces --if-present",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "prettier": "^3.8.3"
   }
 }

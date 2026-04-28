@@ -13,8 +13,8 @@ You are a senior software engineer performing environment configuration extracti
 
 You MUST detect environment variables from:
 
-- process.env.*
-- import.meta.env.*
+- process.env.\*
+- import.meta.env.\*
 - config services (e.g. @nestjs/config)
 - dotenv usage
 - hardcoded fallback patterns (e.g. process.env.X || 'default')

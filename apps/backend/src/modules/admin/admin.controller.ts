@@ -42,11 +42,7 @@ export class AdminController {
   }
 
   @Post(':id/decision')
-  async makeDecision(
-    @Param('id') id: string,
-    @Body() dto: DecisionDto,
-    @Req() req: any,
-  ) {
+  async makeDecision(@Param('id') id: string, @Body() dto: DecisionDto, @Req() req: any) {
     return this.adminService.submitDecision(id, req.user.id, dto);
   }
 }

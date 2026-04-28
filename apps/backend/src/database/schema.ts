@@ -82,9 +82,7 @@ export const auditEvents = pgTable(
   (table) => [index('record_id_idx').on(table.recordId)],
 );
 
-export const notificationTypeEnum = pgEnum('notification_type', [
-  'VERIFICATION_RESULT',
-]);
+export const notificationTypeEnum = pgEnum('notification_type', ['VERIFICATION_RESULT']);
 
 export const notifications = pgTable(
   'notifications',
@@ -120,27 +118,24 @@ export const usersRelations = relations(users, ({ many }) => ({
   notifications: many(notifications),
 }));
 
-export const verificationRecordsRelations = relations(
-  verificationRecords,
-  ({ one, many }) => ({
-    seller: one(users, {
-      fields: [verificationRecords.sellerId],
-      references: [users.id],
-      relationName: 'sellerRecords',
-    }),
-    reviewer: one(users, {
-      fields: [verificationRecords.reviewedBy],
-      references: [users.id],
-      relationName: 'reviewedRecords',
-    }),
-    locker: one(users, {
-      fields: [verificationRecords.lockedBy],
-      references: [users.id],
-      relationName: 'lockedRecords',
-    }),
-    auditEvents: many(auditEvents),
+export const verificationRecordsRelations = relations(verificationRecords, ({ one, many }) => ({
+  seller: one(users, {
+    fields: [verificationRecords.sellerId],
+    references: [users.id],
+    relationName: 'sellerRecords',
   }),
-);
+  reviewer: one(users, {
+    fields: [verificationRecords.reviewedBy],
+    references: [users.id],
+    relationName: 'reviewedRecords',
+  }),
+  locker: one(users, {
+    fields: [verificationRecords.lockedBy],
+    references: [users.id],
+    relationName: 'lockedRecords',
+  }),
+  auditEvents: many(auditEvents),
+}));
 
 export const auditEventsRelations = relations(auditEvents, ({ one }) => ({
   record: one(verificationRecords, {

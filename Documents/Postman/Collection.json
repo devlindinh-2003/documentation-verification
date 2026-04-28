@@ -1,558 +1,483 @@
 {
-	"info": {
-		"_postman_id": "document-verification-collection",
-		"name": "Document Verification API",
-		"description": "API collection for the Document Verification System. Refreshed to match the latest BullMQ-based async verification flow.",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-	},
-	"item": [
-		{
-			"name": "Auth",
-			"item": [
-				{
-					"name": "Register",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"email\": \"seller@example.com\",\n    \"passwordHash\": \"password123\",\n    \"role\": \"seller\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{base_url}}/auth/register",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"auth",
-								"register"
-							]
-						}
-					},
-					"response": [
-						{
-							"name": "Success - User Registered",
-							"originalRequest": {
-								"method": "POST",
-								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"email\": \"seller@example.com\",\n    \"passwordHash\": \"password123\",\n    \"role\": \"seller\"\n}"
-								},
-								"url": {
-									"raw": "{{base_url}}/auth/register",
-									"host": ["{{base_url}}"],
-									"path": ["auth", "register"]
-								}
-							},
-							"status": "Created",
-							"code": 201,
-							"body": "{\n    \"access_token\": \"eyJhbGci...\",\n    \"user\": {\n        \"id\": \"user-uuid\",\n        \"email\": \"seller@example.com\",\n        \"role\": \"seller\"\n    }\n}"
-						}
-					]
-				},
-				{
-					"name": "Login",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"const response = pm.response.json();",
-									"if (response.access_token) {",
-									"    pm.environment.set(\"auth_token\", response.access_token);",
-									"}"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"email\": \"seller@example.com\",\n    \"passwordHash\": \"password123\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{base_url}}/auth/login",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"auth",
-								"login"
-							]
-						}
-					},
-					"response": [
-						{
-							"name": "Success - Logged In",
-							"status": "OK",
-							"code": 200,
-							"body": "{\n    \"access_token\": \"eyJhbGci...\",\n    \"user\": {\n        \"id\": \"user-uuid\",\n        \"email\": \"seller@example.com\",\n        \"role\": \"seller\"\n    }\n}"
-						}
-					]
-				}
-			]
-		},
-		{
-			"name": "Document Verification (Seller)",
-			"item": [
-				{
-					"name": "1. Get Upload URL",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"const response = pm.response.json();",
-									"if (response.uploadUrl) {",
-									"    pm.environment.set(\"upload_url\", response.uploadUrl);",
-									"    pm.environment.set(\"document_key\", response.documentKey);",
-									"}"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{auth_token}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"fileName\": \"business_license.pdf\",\n    \"fileSize\": 1048576,\n    \"mimeType\": \"application/pdf\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{base_url}}/documents/upload-url",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"documents",
-								"upload-url"
-							]
-						}
-					},
-					"response": [
-						{
-							"name": "Success - URL Generated",
-							"status": "Created",
-							"code": 201,
-							"body": "{\n    \"uploadUrl\": \"https://supabase.co/storage/v1/s3/...\",\n    \"documentKey\": \"uuid-business_license.pdf\",\n    \"token\": \"supabase-token\"\n}"
-						}
-					]
-				},
-				{
-					"name": "2. Upload File (Direct to Storage)",
-					"request": {
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/pdf",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "file",
-							"file": {
-								"src": ""
-							}
-						},
-						"url": {
-							"raw": "{{upload_url}}",
-							"host": [
-								"{{upload_url}}"
-							]
-						},
-						"description": "This request sends the file directly to Storage using the signed URL. SELECT A FILE in the 'Body' tab before sending."
-					},
-					"response": []
-				},
-				{
-					"name": "3. Confirm Upload & Start Verification",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"const response = pm.response.json();",
-									"if (response.recordId) {",
-									"    pm.environment.set(\"record_id\", response.recordId);",
-									"}"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{auth_token}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"documentKey\": \"{{document_key}}\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{base_url}}/documents/confirm",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"documents",
-								"confirm"
-							]
-						},
-						"description": "Signals the backend that the file is uploaded. The backend validates metadata and enqueues an async verification job."
-					},
-					"response": [
-						{
-							"name": "Success - Verification Started",
-							"status": "Created",
-							"code": 201,
-							"body": "{\n    \"recordId\": \"record-uuid\",\n    \"status\": \"pending\"\n}"
-						}
-					]
-				},
-				{
-					"name": "4. Get My Verification Status",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{auth_token}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/documents/my",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"documents",
-								"my"
-							]
-						},
-						"description": "Poll this endpoint to see the status transition from 'pending' -> 'processing' -> 'verified|rejected|inconclusive'."
-					},
-					"response": [
-						{
-							"name": "Success - Record Found",
-							"status": "OK",
-							"code": 200,
-							"body": "{\n    \"id\": \"record-uuid\",\n    \"sellerId\": \"user-uuid\",\n    \"documentKey\": \"...\",\n    \"documentName\": \"...\",\n    \"status\": \"verified\",\n    \"version\": 2,\n    \"createdAt\": \"...\",\n    \"updatedAt\": \"...\"\n}"
-						}
-					]
-				}
-			]
-		},
-		{
-			"name": "Admin",
-			"item": [
-				{
-					"name": "List Verifications",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{auth_token}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/admin/verifications?status=inconclusive&limit=20&offset=0",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"admin",
-								"verifications"
-							],
-							"query": [
-								{
-									"key": "status",
-									"value": "inconclusive"
-								},
-								{
-									"key": "limit",
-									"value": "20"
-								},
-								{
-									"key": "offset",
-									"value": "0"
-								}
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get Details",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{auth_token}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/admin/verifications/{{record_id}}",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"admin",
-								"verifications",
-								"{{record_id}}"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get Audit History",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{auth_token}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/admin/verifications/{{record_id}}/history",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"admin",
-								"verifications",
-								"{{record_id}}",
-								"history"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get Document Link",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{auth_token}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/admin/verifications/{{record_id}}/document",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"admin",
-								"verifications",
-								"{{record_id}}",
-								"document"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Claim Record (Lock)",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{auth_token}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/admin/verifications/{{record_id}}/claim",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"admin",
-								"verifications",
-								"{{record_id}}",
-								"claim"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Submit Decision",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{auth_token}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"decision\": \"approved\",\n    \"reason\": \"Manual verification successful\",\n    \"version\": 2\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{base_url}}/admin/verifications/{{record_id}}/decision",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"admin",
-								"verifications",
-								"{{record_id}}",
-								"decision"
-							]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "Mock / System",
-			"item": [
-				{
-					"name": "Trigger Mock Verify (Direct)",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"documentKey\": \"{{document_key}}\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{base_url}}/mock/verify",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"mock",
-								"verify"
-							]
-						},
-						"description": "Directly calls the mock verification service. Useful for testing the mock logic without the full queue flow."
-					},
-					"response": [
-						{
-							"name": "Random Mock Result",
-							"status": "OK",
-							"code": 200,
-							"body": "{\n    \"status\": \"VERIFIED\",\n    \"confidence\": 0.85,\n    \"message\": \"Document integrity and data verified successfully.\"\n}"
-						}
-					]
-				},
-				{
-					"name": "Health Check",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								""
-							]
-						}
-					},
-					"response": []
-				}
-			]
-		}
-	]
+  "info": {
+    "_postman_id": "document-verification-collection",
+    "name": "Document Verification API",
+    "description": "API collection for the Document Verification System. Refreshed to match the latest BullMQ-based async verification flow.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"seller@example.com\",\n    \"passwordHash\": \"password123\",\n    \"role\": \"seller\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success - User Registered",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"email\": \"seller@example.com\",\n    \"passwordHash\": \"password123\",\n    \"role\": \"seller\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/auth/register",
+                  "host": ["{{base_url}}"],
+                  "path": ["auth", "register"]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "body": "{\n    \"access_token\": \"eyJhbGci...\",\n    \"user\": {\n        \"id\": \"user-uuid\",\n        \"email\": \"seller@example.com\",\n        \"role\": \"seller\"\n    }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const response = pm.response.json();",
+                  "if (response.access_token) {",
+                  "    pm.environment.set(\"auth_token\", response.access_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"seller@example.com\",\n    \"passwordHash\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success - Logged In",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n    \"access_token\": \"eyJhbGci...\",\n    \"user\": {\n        \"id\": \"user-uuid\",\n        \"email\": \"seller@example.com\",\n        \"role\": \"seller\"\n    }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Document Verification (Seller)",
+      "item": [
+        {
+          "name": "1. Get Upload URL",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const response = pm.response.json();",
+                  "if (response.uploadUrl) {",
+                  "    pm.environment.set(\"upload_url\", response.uploadUrl);",
+                  "    pm.environment.set(\"document_key\", response.documentKey);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"fileName\": \"business_license.pdf\",\n    \"fileSize\": 1048576,\n    \"mimeType\": \"application/pdf\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/documents/upload-url",
+              "host": ["{{base_url}}"],
+              "path": ["documents", "upload-url"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success - URL Generated",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n    \"uploadUrl\": \"https://supabase.co/storage/v1/s3/...\",\n    \"documentKey\": \"uuid-business_license.pdf\",\n    \"token\": \"supabase-token\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "2. Upload File (Direct to Storage)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/pdf",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "file",
+              "file": {
+                "src": ""
+              }
+            },
+            "url": {
+              "raw": "{{upload_url}}",
+              "host": ["{{upload_url}}"]
+            },
+            "description": "This request sends the file directly to Storage using the signed URL. SELECT A FILE in the 'Body' tab before sending."
+          },
+          "response": []
+        },
+        {
+          "name": "3. Confirm Upload & Start Verification",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const response = pm.response.json();",
+                  "if (response.recordId) {",
+                  "    pm.environment.set(\"record_id\", response.recordId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"documentKey\": \"{{document_key}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/documents/confirm",
+              "host": ["{{base_url}}"],
+              "path": ["documents", "confirm"]
+            },
+            "description": "Signals the backend that the file is uploaded. The backend validates metadata and enqueues an async verification job."
+          },
+          "response": [
+            {
+              "name": "Success - Verification Started",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n    \"recordId\": \"record-uuid\",\n    \"status\": \"pending\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "4. Get My Verification Status",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/documents/my",
+              "host": ["{{base_url}}"],
+              "path": ["documents", "my"]
+            },
+            "description": "Poll this endpoint to see the status transition from 'pending' -> 'processing' -> 'verified|rejected|inconclusive'."
+          },
+          "response": [
+            {
+              "name": "Success - Record Found",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n    \"id\": \"record-uuid\",\n    \"sellerId\": \"user-uuid\",\n    \"documentKey\": \"...\",\n    \"documentName\": \"...\",\n    \"status\": \"verified\",\n    \"version\": 2,\n    \"createdAt\": \"...\",\n    \"updatedAt\": \"...\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "List Verifications",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/verifications?status=inconclusive&limit=20&offset=0",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "verifications"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "inconclusive"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Details",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/verifications/{{record_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "verifications", "{{record_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Audit History",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/verifications/{{record_id}}/history",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "verifications", "{{record_id}}", "history"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Document Link",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/verifications/{{record_id}}/document",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "verifications", "{{record_id}}", "document"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Claim Record (Lock)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/verifications/{{record_id}}/claim",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "verifications", "{{record_id}}", "claim"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Submit Decision",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"decision\": \"approved\",\n    \"reason\": \"Manual verification successful\",\n    \"version\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/verifications/{{record_id}}/decision",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "verifications", "{{record_id}}", "decision"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Mock / System",
+      "item": [
+        {
+          "name": "Trigger Mock Verify (Direct)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"documentKey\": \"{{document_key}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/mock/verify",
+              "host": ["{{base_url}}"],
+              "path": ["mock", "verify"]
+            },
+            "description": "Directly calls the mock verification service. Useful for testing the mock logic without the full queue flow."
+          },
+          "response": [
+            {
+              "name": "Random Mock Result",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n    \"status\": \"VERIFIED\",\n    \"confidence\": 0.85,\n    \"message\": \"Document integrity and data verified successfully.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": ["{{base_url}}"],
+              "path": [""]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
 }

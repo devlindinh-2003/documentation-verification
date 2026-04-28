@@ -1,7 +1,7 @@
 /**
  * Secure Token Management
- * 
- * We store tokens in localStorage for persistence. 
+ *
+ * We store tokens in localStorage for persistence.
  * For higher security, accessToken could be stored in memory only,
  * but that requires a robust silent refresh mechanism on every page load.
  */

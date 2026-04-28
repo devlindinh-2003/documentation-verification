@@ -9,9 +9,7 @@ export const configSchema = z.object({
   SUPABASE_URL: z.string(),
   SUPABASE_ANON_KEY: z.string().min(1),
   SUPABASE_BUCKET: z.string().min(1),
-  NODE_ENV: z
-    .enum(['development', 'production', 'test'])
-    .default('development'),
+  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 });
 
 export type Config = z.infer<typeof configSchema>;

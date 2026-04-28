@@ -31,11 +31,11 @@ The secondary problem is operational throughput. As the marketplace scales, the 
 
 ### Stakeholders and Success Criteria
 
-| Stakeholder | What they care about | Success looks like |
-|---|---|---|
-| **Seller** | Knowing where they stand and being able to act on feedback quickly | Zero ambiguity about current status; clear next steps if rejected; no unnecessary waiting |
+| Stakeholder            | What they care about                                                                         | Success looks like                                                                                                                    |
+| ---------------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| **Seller**             | Knowing where they stand and being able to act on feedback quickly                           | Zero ambiguity about current status; clear next steps if rejected; no unnecessary waiting                                             |
 | **Admin / Operations** | Efficient review queue; enough context to make a good decision; accountability for decisions | One-click access to document + history; no two admins tripping over the same record; decisions are logged with identity and rationale |
-| **Platform** | Legal defensibility; fraud prevention; a system that does not need babysitting | Complete audit trail; resilience against external service failures; a queue that does not silently stall |
+| **Platform**           | Legal defensibility; fraud prevention; a system that does not need babysitting               | Complete audit trail; resilience against external service failures; a queue that does not silently stall                              |
 
 ### Explicitly Out of Scope
 
@@ -161,24 +161,24 @@ graph TD
     API -.->|Enqueue Task| Queue
     Queue -.->|Dispatch Job| Worker
     Worker -->|POST Payload| Vendor
-    
+
     %% Webhook & Resolution
     Vendor -.->|Webhook Callback| API
     API -->|Update Audit Log| DB
     API -.->|Enqueue Notification| Queue
-    
+
     %% Notifications & Fallbacks
     Queue -.->|Dispatch Email Task| Notifier
     Notifier -.->|Notify Seller| Seller
     Cron -.->|Sweep Stale Jobs| DB
-    
+
     %% Styling - Refined for better readability and contrast
     classDef ui fill:#E1F5FE,stroke:#0288D1,stroke-width:2px,color:#000;
     classDef backend fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px,color:#000;
     classDef infra fill:#FFF8E1,stroke:#FFA000,stroke-width:2px,color:#000;
     classDef db fill:#E8F5E9,stroke:#388E3C,stroke-width:2px,color:#000;
     classDef external fill:#FFEBEE,stroke:#D32F2F,stroke-width:2px,color:#000;
-    
+
     class Seller,Admin ui;
     class API,Storage backend;
     class Queue,Worker,Notifier,Cron infra;
@@ -285,7 +285,7 @@ stateDiagram-v2
     PROCESSING --> VERIFIED : Webhook [Status = Verified]
     PROCESSING --> REJECTED : Webhook [Status = Rejected]
     PROCESSING --> INCONCLUSIVE : Webhook [Status = Inconclusive]
-    
+
     PROCESSING --> PENDING : API Error / Retry [Retries < Max]
     PROCESSING --> REJECTED : API Error / Abort [Max Retries]
 
@@ -300,15 +300,15 @@ stateDiagram-v2
 
 **State descriptions:**
 
-| State | Meaning |
-|---|---|
-| `pending` | Document uploaded, job not yet picked up by worker |
-| `processing` | Worker has dispatched the request to the external service; awaiting callback |
-| `verified` | External service returned high-confidence valid; seller will be notified approved |
-| `rejected` | External service returned high-confidence invalid; seller will be notified rejected |
-| `inconclusive` | External service could not determine outcome; awaiting admin review |
-| `approved` | Admin reviewed an inconclusive record and approved it |
-| `denied` | Admin reviewed an inconclusive record and denied it |
+| State          | Meaning                                                                             |
+| -------------- | ----------------------------------------------------------------------------------- |
+| `pending`      | Document uploaded, job not yet picked up by worker                                  |
+| `processing`   | Worker has dispatched the request to the external service; awaiting callback        |
+| `verified`     | External service returned high-confidence valid; seller will be notified approved   |
+| `rejected`     | External service returned high-confidence invalid; seller will be notified rejected |
+| `inconclusive` | External service could not determine outcome; awaiting admin review                 |
+| `approved`     | Admin reviewed an inconclusive record and approved it                               |
+| `denied`       | Admin reviewed an inconclusive record and denied it                                 |
 
 **Guards:**
 
@@ -667,15 +667,15 @@ Accurate "What I built" section. Clear setup instructions. Test credentials. Dep
 
 ### Effort Summary
 
-| Phase | Task | Estimate |
-|---|---|---|
-| 1 | Foundation (repo, DB, auth) | 9h |
-| 2 | Core verification flow | 14h |
-| 3 | Admin module | 8h |
-| 4 | Notification module | 4h |
-| 5 | Frontend | 12h |
-| 6 | Testing, polish, deployment | 11h |
-| **Total** | | **~58h** |
+| Phase     | Task                        | Estimate |
+| --------- | --------------------------- | -------- |
+| 1         | Foundation (repo, DB, auth) | 9h       |
+| 2         | Core verification flow      | 14h      |
+| 3         | Admin module                | 8h       |
+| 4         | Notification module         | 4h       |
+| 5         | Frontend                    | 12h      |
+| 6         | Testing, polish, deployment | 11h      |
+| **Total** |                             | **~58h** |
 
 At ~6 focused hours per working day, this maps to approximately 10 working days, fitting comfortably within a 2-week sprint with buffer for unexpected blockers.
 

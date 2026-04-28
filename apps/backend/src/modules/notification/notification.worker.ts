@@ -24,10 +24,7 @@ export class NotificationWorker extends WorkerHost {
       `Processing notification for seller ${sellerId} for record ${recordId} (status: ${status})`,
     );
 
-    const [seller] = await this.db
-      .select()
-      .from(users)
-      .where(eq(users.id, sellerId));
+    const [seller] = await this.db.select().from(users).where(eq(users.id, sellerId));
 
     if (!seller) {
       this.logger.warn(`Seller not found: ${sellerId}`);

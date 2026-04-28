@@ -6,9 +6,9 @@ services:
     container_name: doc-verification-db
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: user
-      POSTGRES_DB: document_verification_db
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-user}
+      POSTGRES_DB: ${DB_NAME:-document_verification_db}
     ports:
       - '5433:5432'
     volumes:
@@ -18,7 +18,7 @@ services:
     image: redis:7-alpine
     container_name: doc-verification-redis
     restart: always
-    command: [ "redis-server", "--appendonly", "yes" ]
+    command: ['redis-server', '--appendonly', 'yes']
     ports:
       - '6379:6379'
     volumes:

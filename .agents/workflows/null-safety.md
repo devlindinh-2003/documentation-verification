@@ -33,4 +33,5 @@ All external data (API, user input, database) must be treated as:
 ❌ BAD:
 
 ```ts
-user.profile.name
+user.profile.name;
+```

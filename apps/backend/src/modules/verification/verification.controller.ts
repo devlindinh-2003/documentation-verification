@@ -1,11 +1,4 @@
-import {
-  Controller,
-  Post,
-  Get,
-  Body,
-  Req,
-  NotFoundException,
-} from '@nestjs/common';
+import { Controller, Post, Get, Body, Req, NotFoundException } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { UploadUrlDto } from './dto/upload-url.dto';
 import { ConfirmUploadDto } from './dto/confirm-upload.dto';
@@ -26,10 +19,7 @@ export class VerificationController {
   @Post('confirm')
   async confirmUpload(@Body() dto: ConfirmUploadDto, @Req() req: any) {
     const sellerId = req.user.id;
-    return this.verificationService.confirmUploadAndStartVerification(
-      dto.documentKey,
-      sellerId,
-    );
+    return this.verificationService.confirmUploadAndStartVerification(dto.documentKey, sellerId);
   }
 
   @Get('my')

@@ -41,8 +41,7 @@ export class MockVerificationService {
     } else if (documentKey.toLowerCase().endsWith('inconclusive.pdf')) {
       status = 'INCONCLUSIVE';
       confidence = 0.5;
-      message =
-        'Document marked for review via deterministic test (inconclusive.pdf).';
+      message = 'Document marked for review via deterministic test (inconclusive.pdf).';
     } else if (random < 0.5) {
       status = 'VERIFIED';
       confidence = 0.8 + Math.random() * 0.15;
@@ -57,9 +56,7 @@ export class MockVerificationService {
       message = 'Document detected as invalid or tampered.';
     }
 
-    this.logger.log(
-      `Mock verification complete: ${status} (${confidence.toFixed(2)})`,
-    );
+    this.logger.log(`Mock verification complete: ${status} (${confidence.toFixed(2)})`);
 
     return {
       status,

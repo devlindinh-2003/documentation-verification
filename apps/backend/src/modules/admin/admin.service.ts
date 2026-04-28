@@ -1,10 +1,4 @@
-import {
-  Injectable,
-  Inject,
-  Logger,
-  NotFoundException,
-  ConflictException,
-} from '@nestjs/common';
+import { Injectable, Inject, Logger, NotFoundException, ConflictException } from '@nestjs/common';
 import { DRIZZLE } from '../../database/db.module';
 import { verificationRecords, auditEvents } from '../../database/schema';
 import { eq, desc, asc, and, count } from 'drizzle-orm';
@@ -22,11 +16,7 @@ export class AdminService {
     private readonly storageService: StorageService,
   ) {}
 
-  async listVerifications(
-    status?: string,
-    limit: number = 20,
-    offset: number = 0,
-  ) {
+  async listVerifications(status?: string, limit: number = 20, offset: number = 0) {
     let whereClause: any = undefined;
     if (status) {
       whereClause = eq(verificationRecords.status, status as any);
@@ -75,9 +65,7 @@ export class AdminService {
       .where(eq(verificationRecords.id, recordId));
     if (!record) throw new NotFoundException('Record not found');
 
-    const signedUrl = await this.storageService.getSignedUrl(
-      record.documentKey,
-    );
+    const signedUrl = await this.storageService.getSignedUrl(record.documentKey);
     return { url: signedUrl };
   }
 
@@ -92,9 +80,7 @@ export class AdminService {
       // In a single-admin setup, we allow taking over the lock at any time.
       // The audit history will still track the state changes.
       if (record.lockedBy && record.lockedBy !== adminId) {
-        this.logger.log(
-          `Admin ${adminId} is taking over lock from ${record.lockedBy}`,
-        );
+        this.logger.log(`Admin ${adminId} is taking over lock from ${record.lockedBy}`);
       }
 
       const [updated] = await tx
@@ -136,9 +122,7 @@ export class AdminService {
         record.lockedAt &&
         record.lockedAt > tenMinsAgo
       ) {
-        throw new ConflictException(
-          'Record is currently locked by another admin',
-        );
+        throw new ConflictException('Record is currently locked by another admin');
       }
     }
 

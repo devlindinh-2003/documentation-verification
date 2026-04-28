@@ -87,12 +87,8 @@
           "name": "audit_events_record_id_verification_records_id_fk",
           "tableFrom": "audit_events",
           "tableTo": "verification_records",
-          "columnsFrom": [
-            "record_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["record_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -100,12 +96,8 @@
           "name": "audit_events_actor_id_users_id_fk",
           "tableFrom": "audit_events",
           "tableTo": "users",
-          "columnsFrom": [
-            "actor_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["actor_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -168,9 +160,7 @@
         "users_email_unique": {
           "name": "users_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         }
       },
       "policies": {},
@@ -342,12 +332,8 @@
           "name": "verification_records_seller_id_users_id_fk",
           "tableFrom": "verification_records",
           "tableTo": "users",
-          "columnsFrom": [
-            "seller_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["seller_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -355,12 +341,8 @@
           "name": "verification_records_reviewed_by_users_id_fk",
           "tableFrom": "verification_records",
           "tableTo": "users",
-          "columnsFrom": [
-            "reviewed_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["reviewed_by"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -368,12 +350,8 @@
           "name": "verification_records_locked_by_users_id_fk",
           "tableFrom": "verification_records",
           "tableTo": "users",
-          "columnsFrom": [
-            "locked_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["locked_by"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -389,10 +367,7 @@
     "public.role": {
       "name": "role",
       "schema": "public",
-      "values": [
-        "seller",
-        "admin"
-      ]
+      "values": ["seller", "admin"]
     },
     "public.status": {
       "name": "status",

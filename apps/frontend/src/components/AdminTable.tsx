@@ -1,8 +1,8 @@
-import { VerificationRecord } from "../lib/api";
-import { StatusBadge } from "./StatusBadge";
-import { formatDistanceToNow, format } from "date-fns";
-import Link from "next/link";
-import { Lock, User, Clock, ChevronRight } from "lucide-react";
+import { VerificationRecord } from '../types';
+import { StatusBadge } from './StatusBadge';
+import { formatDistanceToNow, format } from 'date-fns';
+import Link from 'next/link';
+import { Lock, User, Clock, ChevronRight } from 'lucide-react';
 
 interface AdminTableProps {
   data: VerificationRecord[];
@@ -16,9 +16,7 @@ export function AdminTable({ data }: AdminTableProps) {
           <User size={32} />
         </div>
         <div className="space-y-1">
-          <p className="text-base font-semibold text-slate-900">
-            No records found
-          </p>
+          <p className="text-base font-semibold text-slate-900">No records found</p>
           <p className="text-sm text-slate-500">
             There are no verification requests matching your current filters.
           </p>
@@ -77,14 +75,10 @@ export function AdminTable({ data }: AdminTableProps) {
                   <div className="flex flex-col">
                     <span className="font-semibold text-slate-700 flex items-center gap-1.5">
                       <Clock size={14} className="text-slate-400" />
-                      {record?.createdAt
-                        ? formatDistanceToNow(new Date(record.createdAt))
-                        : "—"}
+                      {record?.createdAt ? formatDistanceToNow(new Date(record.createdAt)) : '—'}
                     </span>
                     <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-tighter pl-5">
-                      {record?.createdAt
-                        ? format(new Date(record.createdAt), "MMM d, h:mm a")
-                        : ""}
+                      {record?.createdAt ? format(new Date(record.createdAt), 'MMM d, h:mm a') : ''}
                     </span>
                   </div>
                 </td>

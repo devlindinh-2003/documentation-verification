@@ -17,13 +17,7 @@ export class VerificationWorker extends WorkerHost {
   }
 
   async process(job: Job<any, any, string>): Promise<any> {
-    const {
-      recordId,
-      sellerId,
-      documentKey,
-      version: currentVersion,
-      externalJobId,
-    } = job.data;
+    const { recordId, sellerId, documentKey, version: currentVersion, externalJobId } = job.data;
 
     this.logger.log(
       `[Job ${job.id}] Starting verification for record ${recordId} (version ${currentVersion})`,
@@ -41,17 +35,13 @@ export class VerificationWorker extends WorkerHost {
         { externalJobId, jobType: 'automated_verification' },
       );
 
-      this.logger.log(
-        `[Job ${job.id}] Calling mock verification service for record ${recordId}`,
-      );
+      this.logger.log(`[Job ${job.id}] Calling mock verification service for record ${recordId}`);
       const mockResponse = await this.mockService.verifyDocument(documentKey);
 
       const finalStatus = mockResponse.status.toLowerCase() as any;
       const eventType = this.mapStatusToEvent(mockResponse.status);
 
-      this.logger.log(
-        `[Job ${job.id}] Mock service returned: ${finalStatus}. Transitioning...`,
-      );
+      this.logger.log(`[Job ${job.id}] Mock service returned: ${finalStatus}. Transitioning...`);
       await this.stateMachine.transition(
         recordId,
         currentVersion + 1,

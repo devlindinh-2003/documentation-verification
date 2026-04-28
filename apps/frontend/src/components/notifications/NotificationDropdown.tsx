@@ -1,8 +1,8 @@
-import { Notification } from "../../lib/api";
-import { NotificationItem } from "./NotificationItem";
-import { RefreshCw, BellOff, Loader2 } from "lucide-react";
-import { cn } from "../../lib/utils";
-import Link from "next/link";
+import { Notification } from '../../types';
+import { NotificationItem } from './NotificationItem';
+import { RefreshCw, BellOff, Loader2 } from 'lucide-react';
+import { cn } from '../../lib/utils';
+import Link from 'next/link';
 
 interface NotificationDropdownProps {
   notifications: Notification[];
@@ -33,7 +33,7 @@ export function NotificationDropdown({
               e.stopPropagation();
               onMarkAllAsRead();
             }}
-            disabled={isLoading || notifications.filter(n => !n.isRead).length === 0}
+            disabled={isLoading || notifications.filter((n) => !n.isRead).length === 0}
             className="text-[10px] font-black uppercase tracking-widest text-primary hover:bg-primary/5 px-2 py-1.5 rounded-lg transition-all disabled:opacity-30"
           >
             Mark all read
@@ -47,7 +47,7 @@ export function NotificationDropdown({
             className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
             title="Refresh"
           >
-            <RefreshCw size={16} className={cn(isLoading && "animate-spin")} />
+            <RefreshCw size={16} className={cn(isLoading && 'animate-spin')} />
           </button>
         </div>
       </div>
@@ -61,11 +61,7 @@ export function NotificationDropdown({
         ) : notifications.length > 0 ? (
           <div className="divide-y divide-slate-50">
             {notifications.map((notification) => (
-              <NotificationItem
-                key={notification.id}
-                notification={notification}
-                onRead={onRead}
-              />
+              <NotificationItem key={notification.id} notification={notification} onRead={onRead} />
             ))}
           </div>
         ) : (
@@ -74,24 +70,10 @@ export function NotificationDropdown({
               <BellOff size={20} className="text-slate-400" />
             </div>
             <p className="text-sm font-medium text-slate-900">All caught up!</p>
-            <p className="text-xs text-slate-500 mt-1">
-              You have no notifications at the moment.
-            </p>
+            <p className="text-xs text-slate-500 mt-1">You have no notifications at the moment.</p>
           </div>
         )}
       </div>
-
-      {notifications.length > 0 && (
-        <div className="p-3 border-t border-slate-100 text-center bg-slate-50/30">
-          <Link 
-            href="/seller"
-            className="text-xs font-semibold text-slate-500 hover:text-blue-600 transition-colors"
-            onClick={() => onRefresh()}
-          >
-            View all notifications
-          </Link>
-        </div>
-      )}
     </div>
   );
 }

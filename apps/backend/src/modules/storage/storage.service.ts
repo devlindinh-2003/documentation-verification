@@ -30,11 +30,9 @@ export class StorageService {
   }
 
   async getFileMetadata(path: string) {
-    const { data, error } = await this.supabase.storage
-      .from(this.bucket)
-      .list('', {
-        search: path,
-      });
+    const { data, error } = await this.supabase.storage.from(this.bucket).list('', {
+      search: path,
+    });
 
     // Supabase 'list' doesn't always return a single object metadata easily by path if it's nested
     // but getMetadata is not available in the public JS SDK as a single call always.
@@ -66,9 +64,7 @@ export class StorageService {
       .createSignedUrl(path, expiresIn);
 
     if (error) {
-      throw new InternalServerErrorException(
-        `Failed to create signed URL: ${error.message}`,
-      );
+      throw new InternalServerErrorException(`Failed to create signed URL: ${error.message}`);
     }
 
     return data.signedUrl;

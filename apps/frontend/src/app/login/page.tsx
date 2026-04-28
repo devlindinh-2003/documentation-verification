@@ -1,15 +1,18 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useAuth } from "../../hooks/useAuth";
-import { api } from "../../lib/api";
-import { useRouter } from "next/navigation";
-import { ShieldCheck, Mail, Lock, Loader2, ArrowRight } from "lucide-react";
+import { useState } from 'react';
+import { useAuth } from '../../hooks/useAuth';
+import { authService } from '../../services/auth.service';
+import { useRouter } from 'next/navigation';
+import { ShieldCheck, Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
+import { jwtDecode } from 'jwt-decode';
+import { JWTPayload } from '../../types';
+import { mapErrorToMessage } from '../../lib/error-messages';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const login = useAuth((state) => state.login);
@@ -17,33 +20,28 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setError('');
     setLoading(true);
 
     try {
-      const { data } = await api.post("/auth/login", {
+      const { data } = await authService.login({
         email,
-        password: password,
+        password,
       });
-      login(data.access_token, data.refreshToken || "");
-      const base64Url = data.access_token.split(".")[1];
-      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-      const jsonPayload = decodeURIComponent(
-        atob(base64)
-          .split("")
-          .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-          .join(""),
-      );
-      const decoded = JSON.parse(jsonPayload);
 
-      if (decoded.role === "admin") {
-        router.push("/admin");
+      // The login helper from useAuth already handles JWT decoding and state updates
+      login(data.access_token, data.refreshToken || '');
+
+      // Decode locally just for routing decision
+      const decoded = jwtDecode<JWTPayload>(data.access_token);
+
+      if (decoded.role === 'admin') {
+        router.push('/admin');
       } else {
-        router.push("/seller");
+        router.push('/seller');
       }
     } catch (err: unknown) {
-      const axiosError = err as { response?: { data?: { message?: string } } };
-      setError(axiosError.response?.data?.message || "Failed to login");
+      setError(mapErrorToMessage(err));
     } finally {
       setLoading(false);
     }
@@ -52,21 +50,24 @@ export default function LoginPage() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50/50 p-4">
       <div className="w-full max-w-[440px] space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-        
         {/* Logo Section */}
         <div className="text-center space-y-2">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-2xl shadow-xl shadow-primary/20 mb-2">
             <ShieldCheck className="text-white" size={32} />
           </div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">VeriFlow</h1>
-          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Secure Identity Gateway</p>
+          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">
+            Secure Identity Gateway
+          </p>
         </div>
 
         {/* Login Card */}
         <div className="bg-white p-10 rounded-[32px] shadow-2xl shadow-slate-200/50 border border-slate-200">
           <div className="space-y-2 mb-8">
             <h2 className="text-xl font-black text-slate-900">Welcome Back</h2>
-            <p className="text-sm font-medium text-slate-500">Sign in to your dashboard to continue.</p>
+            <p className="text-sm font-medium text-slate-500">
+              Sign in to your dashboard to continue.
+            </p>
           </div>
 
           {error && (
@@ -81,7 +82,10 @@ export default function LoginPage() {
                 Email Address
               </label>
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                <Mail
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"
+                  size={18}
+                />
                 <input
                   type="email"
                   required
@@ -98,7 +102,10 @@ export default function LoginPage() {
                 Password
               </label>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                <Lock
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"
+                  size={18}
+                />
                 <input
                   type="password"
                   required

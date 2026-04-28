@@ -1,10 +1,4 @@
-import {
-  Injectable,
-  Logger,
-  Inject,
-  NotFoundException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, Logger, Inject, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
@@ -23,9 +17,7 @@ export class NotificationService {
 
   @OnEvent('verification.finalised')
   async handleVerificationFinalised(record: any) {
-    this.logger.log(
-      `Queueing notification for record ${record.id} with status ${record.status}`,
-    );
+    this.logger.log(`Queueing notification for record ${record.id} with status ${record.status}`);
 
     await this.notificationQueue.add(
       'send-notification',
@@ -99,9 +91,7 @@ export class NotificationService {
     const [result] = await this.db
       .select({ count: count() })
       .from(notifications)
-      .where(
-        and(eq(notifications.userId, userId), eq(notifications.isRead, false)),
-      );
+      .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
 
     return result.count;
   }
@@ -139,9 +129,7 @@ export class NotificationService {
         isRead: true,
         readAt: new Date(),
       })
-      .where(
-        and(eq(notifications.userId, userId), eq(notifications.isRead, false)),
-      )
+      .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)))
       .returning();
   }
 }
