@@ -11,6 +11,7 @@
     "build": "npm run build --workspaces --if-present",
     "start": "npm run start --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
+    "start:prod": "npm run start:prod --workspace=backend",
     "format": "prettier --write ."
   },
   "devDependencies": {
