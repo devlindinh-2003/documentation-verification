@@ -12,7 +12,16 @@ import {
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
+/**
+ * Global roles for users.
+ */
 export const roleEnum = pgEnum('role', ['seller', 'admin']);
+
+/**
+ * Statuses for verification records.
+ * Terminal states: verified, rejected, approved, denied.
+ * Transitional states: pending, processing, inconclusive.
+ */
 export const statusEnum = pgEnum('status', [
   'pending',
   'processing',
@@ -23,15 +32,22 @@ export const statusEnum = pgEnum('status', [
   'denied',
 ]);
 
+/**
+ * Users table stores both sellers and admins.
+ */
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   email: text('email').notNull().unique(),
   passwordHash: text('password_hash').notNull(),
   role: roleEnum('role').notNull(),
+  isDemo: boolean('is_demo').notNull().default(false), // Flag for volatile demo accounts
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
+/**
+ * Verification records track the lifecycle of a document verification request.
+ */
 export const verificationRecords = pgTable(
   'verification_records',
   {
@@ -40,18 +56,18 @@ export const verificationRecords = pgTable(
       .notNull()
       .references(() => users.id),
     status: statusEnum('status').notNull().default('pending'),
-    documentKey: text('document_key').notNull(),
+    documentKey: text('document_key').notNull(), // S3/Storage key
     documentName: text('document_name').notNull(),
     documentSize: integer('document_size').notNull(),
     documentMime: text('document_mime').notNull(),
-    externalJobId: text('external_job_id'),
+    externalJobId: text('external_job_id'), // Correlation ID for BullMQ/External providers
     externalResult: text('external_result'),
-    reviewedBy: uuid('reviewed_by').references(() => users.id),
+    reviewedBy: uuid('reviewed_by').references(() => users.id), // Admin who made the final decision
     reviewReason: text('review_reason'),
-    lockedBy: uuid('locked_by').references(() => users.id),
+    lockedBy: uuid('locked_by').references(() => users.id), // Soft lock for admin review
     lockedAt: timestamp('locked_at'),
     notifiedAt: timestamp('notified_at'),
-    version: integer('version').notNull().default(1),
+    version: integer('version').notNull().default(1), // Used for optimistic concurrency control
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
   },
@@ -62,6 +78,9 @@ export const verificationRecords = pgTable(
   ],
 );
 
+/**
+ * Audit events table provides an immutable history of all state changes.
+ */
 export const auditEvents = pgTable(
   'audit_events',
   {
@@ -72,11 +91,11 @@ export const auditEvents = pgTable(
     actorId: uuid('actor_id')
       .notNull()
       .references(() => users.id),
-    actorRole: text('actor_role').notNull(),
+    actorRole: text('actor_role').notNull(), // Snapshot of role at time of event
     eventType: text('event_type').notNull(),
     fromStatus: text('from_status').notNull(),
     toStatus: text('to_status').notNull(),
-    metadata: jsonb('metadata').notNull(),
+    metadata: jsonb('metadata').notNull(), // Context-specific data (e.g., job IDs, failure reasons)
     createdAt: timestamp('created_at').notNull().defaultNow(),
   },
   (table) => [index('record_id_idx').on(table.recordId)],
@@ -84,6 +103,9 @@ export const auditEvents = pgTable(
 
 export const notificationTypeEnum = pgEnum('notification_type', ['VERIFICATION_RESULT']);
 
+/**
+ * Notifications table for in-app alerts to users.
+ */
 export const notifications = pgTable(
   'notifications',
   {
@@ -96,15 +118,13 @@ export const notifications = pgTable(
     type: notificationTypeEnum('type').notNull(),
     isRead: boolean('is_read').notNull().default(false),
     readAt: timestamp('read_at'),
-    metadata: jsonb('metadata').notNull(), // { recordId: string, status: string }
+    metadata: jsonb('metadata').notNull(), // e.g., { recordId: string, status: string }
     createdAt: timestamp('created_at').notNull().defaultNow(),
   },
-  (table) => [
-    index('notif_user_id_idx').on(table.userId),
-    // We will handle idempotency in the service layer since functional indexes on JSONB
-    // are tricky to define in a portable way in Drizzle schemas without raw SQL.
-  ],
+  (table) => [index('notif_user_id_idx').on(table.userId)],
 );
+
+// --- Relations ---
 
 export const usersRelations = relations(users, ({ many }) => ({
   verificationRecords: many(verificationRecords, {

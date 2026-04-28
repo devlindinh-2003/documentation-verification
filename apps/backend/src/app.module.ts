@@ -23,7 +23,9 @@ import { LoggerMiddleware } from './common/middleware/logger.middleware';
       load: [configuration],
       envFilePath: [
         process.env.NODE_ENV === 'production' ? '.env.production' : '.env.local',
-        process.env.NODE_ENV === 'production' ? 'apps/backend/.env.production' : 'apps/backend/.env.local',
+        process.env.NODE_ENV === 'production'
+          ? 'apps/backend/.env.production'
+          : 'apps/backend/.env.local',
       ],
     }),
     ThrottlerModule.forRoot([

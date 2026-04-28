@@ -1,23 +1,29 @@
 import { Injectable, Inject, Logger, NotFoundException, ConflictException } from '@nestjs/common';
 import { DRIZZLE } from '../../database/db.module';
 import { verificationRecords, auditEvents } from '../../database/schema';
-import { eq, desc, asc, and, count } from 'drizzle-orm';
+import * as schema from '../../database/schema';
+import { eq, desc, asc, and, count, SQL } from 'drizzle-orm';
 import { StateMachineService } from '../verification/state-machine.service';
 import { StorageService } from '../storage/storage.service';
 import { DecisionDto } from './dto/decision.dto';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 @Injectable()
 export class AdminService {
   private readonly logger = new Logger(AdminService.name);
 
   constructor(
-    @Inject(DRIZZLE) private readonly db: any,
+    @Inject(DRIZZLE) private readonly db: NodePgDatabase<typeof schema>,
     private readonly stateMachine: StateMachineService,
     private readonly storageService: StorageService,
   ) {}
 
+  /**
+   * Lists all verification records with optional status filtering.
+   * Supports pagination for large datasets.
+   */
   async listVerifications(status?: string, limit: number = 20, offset: number = 0) {
-    let whereClause: any = undefined;
+    let whereClause: SQL | undefined = undefined;
     if (status) {
       whereClause = eq(verificationRecords.status, status as any);
     }
@@ -41,6 +47,9 @@ export class AdminService {
     };
   }
 
+  /**
+   * Retrieves a single verification record by ID.
+   */
   async getVerificationById(recordId: string) {
     const [record] = await this.db
       .select()
@@ -50,6 +59,9 @@ export class AdminService {
     return record;
   }
 
+  /**
+   * Returns the complete audit history for a verification record.
+   */
   async getHistory(recordId: string) {
     return this.db
       .select()
@@ -58,6 +70,10 @@ export class AdminService {
       .orderBy(asc(auditEvents.createdAt));
   }
 
+  /**
+   * Generates a signed GET URL for viewing the document.
+   * This ensures documents are not public while allowing admin review.
+   */
   async getDocumentUrl(recordId: string) {
     const [record] = await this.db
       .select()
@@ -69,6 +85,10 @@ export class AdminService {
     return { url: signedUrl };
   }
 
+  /**
+   * Claims a record for review, setting a soft lock.
+   * Uses optimistic locking to prevent concurrent claims.
+   */
   async claimRecord(recordId: string, adminId: string) {
     return await this.db.transaction(async (tx: any) => {
       const [record] = await tx
@@ -77,8 +97,7 @@ export class AdminService {
         .where(eq(verificationRecords.id, recordId));
       if (!record) throw new NotFoundException('Record not found');
 
-      // In a single-admin setup, we allow taking over the lock at any time.
-      // The audit history will still track the state changes.
+      // Audit policy: Log when a lock is overtaken (even if expired)
       if (record.lockedBy && record.lockedBy !== adminId) {
         this.logger.log(`Admin ${adminId} is taking over lock from ${record.lockedBy}`);
       }
@@ -107,6 +126,10 @@ export class AdminService {
     });
   }
 
+  /**
+   * Submits a final decision (approved/denied) for a record.
+   * Validates the lock and uses the StateMachine for the transition.
+   */
   async submitDecision(recordId: string, adminId: string, dto: DecisionDto) {
     const [record] = await this.db
       .select()
@@ -114,6 +137,7 @@ export class AdminService {
       .where(eq(verificationRecords.id, recordId));
     if (!record) throw new NotFoundException('Record not found');
 
+    // Soft-lock expiry check (10 minutes)
     if (record.lockedBy !== adminId) {
       const tenMinsAgo = new Date(Date.now() - 10 * 60 * 1000);
       if (

@@ -14,12 +14,19 @@ interface AuthState {
   init: () => void;
 }
 
+/**
+ * Global authentication state managed via Zustand.
+ * Handles token storage, session initialization, and JWT decoding.
+ */
 export const useAuth = create<AuthState>((set) => ({
   user: null,
   role: null,
   isAuthenticated: false,
   isInitialized: false,
 
+  /**
+   * Persists tokens and hydrates the user state from the JWT payload.
+   */
   login: (accessToken: string, refreshToken: string) => {
     if (!accessToken) {
       console.error('Login failed: Access token is missing');
@@ -39,6 +46,9 @@ export const useAuth = create<AuthState>((set) => ({
     }
   },
 
+  /**
+   * Clears session data and redirects to the login page.
+   */
   logout: () => {
     clearTokens();
     set({ user: null, role: null, isAuthenticated: false });
@@ -47,7 +57,11 @@ export const useAuth = create<AuthState>((set) => ({
     }
   },
 
+  /**
+   * Restores the session from local storage on application startup.
+   */
   init: () => {
+    // Prevent SSR hydration mismatches
     if (typeof window === 'undefined') {
       set({ isInitialized: true });
       return;
@@ -72,6 +86,7 @@ export const useAuth = create<AuthState>((set) => ({
             isInitialized: true,
           });
         } else {
+          // Token expired, clear session
           clearTokens();
           set({
             user: null,

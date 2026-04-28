@@ -1,12 +1,6 @@
-'use client';
-
-import { QueryClientProvider } from '@tanstack/react-query';
-import { queryClient } from '../lib/query-client';
-import { useAuth } from '../hooks/useAuth';
-import { useEffect } from 'react';
-import { Header } from '../components/Header';
 import { Roboto } from 'next/font/google';
-import { Toaster } from '../components/ui/sonner';
+import { Header } from '../components/Header';
+import { Providers } from '../components/Providers';
 import '../app/globals.css';
 
 const roboto = Roboto({
@@ -16,21 +10,19 @@ const roboto = Roboto({
   variable: '--font-roboto',
 });
 
+export const metadata = {
+  title: 'VeriFlow | Secure Document Verification',
+  description: 'Streamlined identity and document verification gateway.',
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const init = useAuth((state) => state.init);
-
-  useEffect(() => {
-    init();
-  }, [init]);
-
   return (
-    <html lang="en" className={roboto.variable}>
+    <html lang="en" className={roboto.variable} suppressHydrationWarning>
       <body className={`${roboto.className} antialiased min-h-screen bg-slate-50 text-slate-900`}>
-        <QueryClientProvider client={queryClient}>
+        <Providers>
           <Header />
           <main>{children}</main>
-          <Toaster position="top-right" />
-        </QueryClientProvider>
+        </Providers>
       </body>
     </html>
   );

@@ -1,9 +1,14 @@
 import { api } from '../lib/api';
-import { VerificationRecord, PaginatedResult, ApiResponse } from '../types';
+import { VerificationRecord, PaginatedResult, ApiResponse, VerificationStatus } from '../types';
 
+/**
+ * Service for managing document verifications.
+ * Handles both seller-facing upload flows and admin-facing review flows.
+ */
 export const verificationService = {
   /**
-   * Get all verification records for the current seller
+   * Fetches all verification records for the authenticated seller.
+   * Records are sorted by creation date (newest first).
    */
   getMyVerifications: async (): Promise<ApiResponse<VerificationRecord[]>> => {
     const { data } = await api.get<VerificationRecord[]>('/documents');
@@ -14,7 +19,8 @@ export const verificationService = {
   },
 
   /**
-   * Request a presigned URL for document upload
+   * Phase 1 of upload: requests a presigned PUT URL from the backend.
+   * This allows the browser to upload directly to S3 without proxying through the API.
    */
   getUploadUrl: async (params: {
     fileName: string;
@@ -29,7 +35,8 @@ export const verificationService = {
   },
 
   /**
-   * Confirm document upload
+   * Phase 2 of upload: notifies the backend that the file is in storage.
+   * The backend will validate the file on S3 before creating the database record.
    */
   confirmUpload: async (documentKey: string): Promise<ApiResponse<void>> => {
     await api.post('/documents/confirm', { documentKey });
@@ -37,10 +44,10 @@ export const verificationService = {
   },
 
   /**
-   * [Admin] Get all verification records with filters
+   * [Admin] Retrieves a paginated list of all verifications for the admin dashboard.
    */
   getAdminVerifications: async (params: {
-    status?: string;
+    status?: VerificationStatus;
     limit?: number;
     offset?: number;
   }): Promise<ApiResponse<PaginatedResult<VerificationRecord>>> => {
@@ -55,7 +62,8 @@ export const verificationService = {
   },
 
   /**
-   * [Admin] Claim a verification record
+   * [Admin] Claims a record to prevent multiple admins from reviewing the same document.
+   * Uses optimistic locking (version) to handle concurrent claim attempts.
    */
   claimRecord: async (id: string, version: number): Promise<ApiResponse<void>> => {
     await api.post(`/admin/verifications/${id}/claim`, { version });
@@ -63,7 +71,7 @@ export const verificationService = {
   },
 
   /**
-   * [Admin] Submit a decision for a verification record
+   * [Admin] Submits a final manual decision for an inconclusive verification.
    */
   submitDecision: async (
     id: string,
