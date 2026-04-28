@@ -1,98 +1,158 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Backend | Document Verification System
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+## 1. Project Overview
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+The backend application is the core orchestration layer for the Document Verification System. It securely handles identity verification requests, manages async document processing workflows, and maintains strict database integrity.
 
-## Description
+Its responsibilities include:
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- Managing user authentication and role-based access control (Sellers vs Admins).
+- Generating secure, time-limited presigned URLs for direct-to-cloud document uploads.
+- Orchestrating the asynchronous verification pipeline via distributed message queues.
+- Exposing secure Webhook endpoints for third-party verification providers.
+- Managing strict state machine transitions for document records.
 
-## Project setup
+## 2. Tech Stack
 
-```bash
-$ npm install
+- **Runtime:** Node.js
+- **Framework:** NestJS (v11)
+- **Database:** PostgreSQL (`pg`)
+- **ORM:** Drizzle ORM (`drizzle-orm`, `drizzle-kit`)
+- **Authentication:** Passport, JWT (`@nestjs/jwt`), Argon2 (Password hashing)
+- **Message Queue:** BullMQ (backed by Redis)
+- **External Services:** Supabase Storage (Object Storage)
+- **Validation:** Zod (`nestjs-zod`)
+- **Security/Monitoring:** `@nestjs/throttler` (Rate limiting), internal request logging.
+
+## 3. Project Structure
+
+```text
+apps/backend/
+├── src/
+│   ├── common/           # Global guards, filters, decorators, and interceptors
+│   ├── config/           # Environment configuration and validation
+│   ├── database/         # Drizzle schema, migrations, and seed scripts
+│   ├── modules/
+│   │   ├── admin/        # Admin endpoints, document claiming, and decisions
+│   │   ├── auth/         # Login, token generation, and demo account creation
+│   │   ├── mock-verification/ # Simulated external vendor processing
+│   │   ├── notification/ # In-app user notifications
+│   │   ├── storage/      # Supabase interaction (presigned URLs)
+│   │   └── verification/ # Seller document submission and Webhook callbacks
+│   ├── app.module.ts     # Root module
+│   └── main.ts           # Application entry point
+├── drizzle/              # Generated SQL migrations
+├── test/                 # E2E test suites
+├── .env.example          # Environment variables template
+├── drizzle.config.ts     # Drizzle studio/CLI configuration
+└── package.json          # Dependencies and scripts
 ```
 
-## Compile and run the project
+## 4. Setup Instructions
+
+### Prerequisites
+
+- Node.js (v20+)
+- PostgreSQL database
+- Redis instance
+
+### Installation
+
+From the `apps/backend` directory (or monorepo root):
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npm install
 ```
 
-## Run tests
+### Environment Variables
+
+Copy `.env.example` to `.env.local` (or just `.env` depending on your setup) and update the values:
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+cp .env.example .env.local
 ```
 
-## Deployment
+Ensure you have valid PostgreSQL, Redis, and Supabase credentials.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+### Running Locally
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+1. Run migrations and seed the database:
+   ```bash
+   npm run db:push
+   # or
+   npm run db:migrate
+   npm run db:seed
+   ```
+2. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+### Build Steps
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm run build
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## 5. API Overview
 
-## Resources
+### Main Domains & Endpoints
 
-Check out a few resources that may come in handy when working with NestJS:
+- **Auth:**
+  - `POST /auth/login` - Returns JWT.
+  - `POST /auth/demo` - Generates a demo account.
+- **Verification (Seller):**
+  - `POST /verifications/upload-url` - Requests a presigned PUT URL.
+  - `POST /verifications/confirm` - Confirms upload and queues the job.
+  - `GET /verifications/status` - Gets the status of the seller's current document.
+  - `POST /verifications/callback` - **Webhook Receiver** for external provider results.
+- **Admin:**
+  - `GET /admin/verifications` - Lists inconclusive records for review.
+  - `POST /admin/verifications/:id/claim` - Soft-locks a record to prevent concurrent edits.
+  - `POST /admin/verifications/:id/decision` - Submits a manual `approved` or `denied` result.
+- **Notifications:**
+  - `GET /notifications` - Retrieves unread alerts for the user.
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+### Request/Response Format & Validation
 
-## Support
+All incoming requests are validated against Zod schemas using `nestjs-zod`.
+Unexpected fields are stripped. Validation errors return `400 Bad Request` with structured error details.
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+### Authentication Flow
 
-## Stay in touch
+Endpoints are protected by `@UseGuards(JwtAuthGuard)`. Admin routes additionally require a `RolesGuard`. The JWT is passed as a Bearer token in the `Authorization` header.
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+## 6. Scripts
 
-## License
+- `npm run dev`: Starts the NestJS dev server with hot-reloading.
+- `npm run build`: Compiles the TS code into the `dist` directory.
+- `npm run start:prod`: Runs the production build (`node dist/src/main`).
+- `npm run db:generate`: Generates Drizzle SQL migrations based on schema changes.
+- `npm run db:migrate`: Executes pending database migrations.
+- `npm run db:push`: Pushes schema directly to DB (dev only).
+- `npm run db:seed`: Populates the database with default users and test data.
+- `npm run lint`: Runs ESLint over the codebase.
+- `npm run format`: Runs Prettier.
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+## 7. Deployment Guide
+
+### How to Deploy Backend
+
+The NestJS app compiles to standard Node.js and can be deployed via Docker, Render, Heroku, or AWS ECS.
+
+1. Configure environment variables in the production environment.
+2. Ensure the production PostgreSQL and Redis databases are accessible.
+3. Run the build step during deployment (`npm run build`).
+4. Execute migrations before the app starts (`npm run db:migrate`).
+5. Start the server using `npm run start:prod`.
+
+### Environment Differences
+
+- **Local:** Connects to local Postgres/Redis via `.env.local`. Uses `npm run dev`.
+- **Production:** Connects to managed services (e.g., Supabase DB, Upstash Redis). Safety guards in `main.ts` will throw warnings if production DBs are accidentally used in `NODE_ENV=development`.
+
+## 8. Notes / Best Practices
+
+- **Architecture Decisions:** Code is cleanly separated by domain in bounded modules. Services do not cross-import directly; communication happens via shared interfaces or events.
+- **Data Integrity:** PostgreSQL transactions and Optimistic Locking (`version` column) ensure that concurrent admin updates or race conditions do not corrupt the verification state machine.
+- **Security:** Files are never streamed through the Node app. Direct-to-storage presigned URLs are used. Incoming webhooks are strictly verified using HMAC signatures.
