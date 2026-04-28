@@ -13,11 +13,10 @@ async function bootstrap() {
 
   // Allow requests from frontend
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5001',
+    origin: true,
     credentials: true,
   });
 
-  // Restart server after changing env
   await app.listen(process.env.PORT ?? 8000);
 }
 bootstrap();
