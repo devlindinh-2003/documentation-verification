@@ -7,13 +7,13 @@ import { useAuth } from '../../hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { AdminTable } from '../../components/AdminTable';
 import { LayoutGrid, Users, Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
-import { VerificationRecord, ApiResponse, PaginatedResult } from '../../types';
+import { VerificationRecord, ApiResponse, PaginatedResult, VerificationStatus } from '../../types';
 
 export default function AdminPage() {
   const { isAuthenticated, role, isInitialized } = useAuth();
   const router = useRouter();
 
-  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<VerificationStatus | ''>('');
 
   useEffect(() => {
     if (!isInitialized) return;
@@ -29,7 +29,10 @@ export default function AdminPage() {
     ApiResponse<PaginatedResult<VerificationRecord>>
   >({
     queryKey: ['admin-verifications', statusFilter],
-    queryFn: () => verificationService.getAdminVerifications({ status: statusFilter }),
+    queryFn: () =>
+      verificationService.getAdminVerifications({
+        status: statusFilter === '' ? undefined : statusFilter,
+      }),
     enabled: isAuthenticated && role === 'admin',
     refetchInterval: 10000,
   });
@@ -130,15 +133,17 @@ export default function AdminPage() {
         <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-200 overflow-hidden">
           <div className="p-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-4 bg-slate-50/30">
             <div className="flex items-center bg-white p-1 rounded-xl border border-slate-200/60 shadow-sm">
-              {[
-                { id: '', label: 'All Requests' },
-                { id: 'inconclusive', label: 'Needs Review' },
-                { id: 'pending', label: 'Pending' },
-                { id: 'processing', label: 'Processing' },
-              ].map((tab) => (
+              {(
+                [
+                  { id: '', label: 'All Requests' },
+                  { id: 'inconclusive', label: 'Needs Review' },
+                  { id: 'pending', label: 'Pending' },
+                  { id: 'processing', label: 'Processing' },
+                ] as const
+              ).map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => setStatusFilter(tab.id)}
+                  onClick={() => setStatusFilter(tab.id as VerificationStatus | '')}
                   className={`px-4 py-2 text-xs font-black uppercase tracking-tighter rounded-lg transition-all duration-200 ${
                     statusFilter === tab.id
                       ? 'bg-primary text-white shadow-md shadow-primary/20 scale-[1.02]'

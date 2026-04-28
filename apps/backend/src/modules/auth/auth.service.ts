@@ -40,6 +40,27 @@ export class AuthService {
 
     return this.generateToken(newUser);
   }
+  async createDemoAccount() {
+    const timestamp = Date.now();
+    const email = `demo_${timestamp}@example.com`;
+    const password = 'password123';
+    const hashedPassword = await argon2.hash(password);
+
+    const [newUser] = await this.db
+      .insert(users)
+      .values({
+        email,
+        passwordHash: hashedPassword,
+        role: 'seller',
+        isDemo: true,
+      })
+      .returning();
+
+    return {
+      email: newUser.email,
+      password: password, // Return plain password once
+    };
+  }
 
   async login(loginDto: LoginDto) {
     const userResult = await this.db

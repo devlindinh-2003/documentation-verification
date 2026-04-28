@@ -20,4 +20,10 @@ export class AuthController {
   async login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
   }
+
+  @Public()
+  @Post('demo/create')
+  async demoCreate() {
+    return this.authService.createDemoAccount();
+  }
 }

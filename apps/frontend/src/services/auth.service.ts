@@ -1,19 +1,19 @@
 import { api } from '../lib/api';
-import { ApiResponse } from '../types';
+import { ApiResponse, User } from '../types';
 
 interface LoginResponse {
   access_token: string;
-  user: {
-    id: string;
-    email: string;
-    role: string;
-  };
-  refreshToken?: string; // Optional if not returned by all endpoints
+  user: User;
+  refreshToken?: string;
 }
 
+/**
+ * Authentication service handling login, token refresh, and demo account creation.
+ * All methods return standardized ApiResponse wrappers from axios interceptors.
+ */
 export const authService = {
   /**
-   * Log in with email and password
+   * authenticates a user and returns a JWT access token.
    */
   login: async (credentials: Record<string, string>): Promise<ApiResponse<LoginResponse>> => {
     const { data } = await api.post<LoginResponse>('/auth/login', credentials);
@@ -21,12 +21,22 @@ export const authService = {
   },
 
   /**
-   * Refresh the access token
+   * refreshes the session token (stub for future implementation).
    */
   refresh: async (refreshToken: string): Promise<ApiResponse<LoginResponse>> => {
     const { data } = await api.post<LoginResponse>('/auth/refresh', {
       refreshToken,
     });
+    return { data };
+  },
+
+  /**
+   * provisions a one-time demo account for system exploration.
+   */
+  demoCreate: async (): Promise<ApiResponse<{ email: string; password: 'password123' }>> => {
+    const { data } = await api.post<{ email: string; password: 'password123' }>(
+      '/auth/demo/create',
+    );
     return { data };
   },
 };

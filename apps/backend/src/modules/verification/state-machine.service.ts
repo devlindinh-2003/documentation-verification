@@ -6,23 +6,29 @@ import {
 } from '@nestjs/common';
 import { DRIZZLE } from '../../database/db.module';
 import { verificationRecords, auditEvents } from '../../database/schema';
+import * as schema from '../../database/schema';
 import { eq, and } from 'drizzle-orm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 @Injectable()
 export class StateMachineService {
   constructor(
-    @Inject(DRIZZLE) private readonly db: any,
+    @Inject(DRIZZLE) private readonly db: NodePgDatabase<typeof schema>,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
+  /**
+   * Initializes a verification record in 'pending' state.
+   * This is the entry point for all new document verification requests.
+   */
   async createPendingRecord(
     sellerId: string,
     documentKey: string,
     documentName: string,
     documentSize: number,
     documentMime: string,
-    existingTx?: any,
+    existingTx?: any, // Using any for transaction compatibility across Drizzle versions
   ) {
     const runner = async (tx: any) => {
       const [newRecord] = await tx
@@ -37,6 +43,7 @@ export class StateMachineService {
         })
         .returning();
 
+      // Audit every state change, even the initial creation
       await tx.insert(auditEvents).values({
         recordId: newRecord.id,
         actorId: sellerId,
@@ -59,22 +66,19 @@ export class StateMachineService {
     return await this.db.transaction(runner);
   }
 
+  /**
+   * Orchestrates state transitions with optimistic locking and audit logging.
+   * Transitions are guarded by validateTransition() to ensure logical consistency.
+   */
   async transition(
     recordId: string,
     currentVersion: number,
-    toStatus:
-      | 'processing'
-      | 'verified'
-      | 'rejected'
-      | 'inconclusive'
-      | 'pending'
-      | 'approved'
-      | 'denied',
+    toStatus: typeof verificationRecords.$inferSelect.status,
     actorId: string,
     actorRole: 'seller' | 'admin' | 'system',
     eventType: string,
-    metadata: any = {},
-    extraUpdates: any = {},
+    metadata: Record<string, any> = {},
+    extraUpdates: Partial<typeof verificationRecords.$inferSelect> = {},
   ) {
     return await this.db.transaction(async (tx: any) => {
       const [currentRecord] = await tx
@@ -88,6 +92,7 @@ export class StateMachineService {
 
       this.validateTransition(currentRecord.status, toStatus);
 
+      // Optimistic locking: verify the version hasn't changed since we last read it
       const [updatedRecord] = await tx
         .update(verificationRecords)
         .set({
@@ -108,6 +113,7 @@ export class StateMachineService {
         throw new ConflictException('Concurrent modification detected');
       }
 
+      // Record the transition in the audit trail
       await tx.insert(auditEvents).values({
         recordId: updatedRecord.id,
         actorId,
@@ -118,6 +124,7 @@ export class StateMachineService {
         metadata,
       });
 
+      // Emit events for cross-module side effects (e.g., notifications)
       if (['verified', 'rejected', 'approved', 'denied', 'inconclusive'].includes(toStatus)) {
         this.eventEmitter.emit('verification.finalised', updatedRecord);
       }
@@ -126,6 +133,10 @@ export class StateMachineService {
     });
   }
 
+  /**
+   * Enforces the business rules for state transitions.
+   * Terminal states (verified, rejected, approved, denied) cannot be transitioned out of.
+   */
   private validateTransition(from: string, to: string) {
     const validTransitions: Record<string, string[]> = {
       pending: ['processing'],

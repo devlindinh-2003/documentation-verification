@@ -15,6 +15,13 @@
       "when": 1777291526883,
       "tag": "0001_nice_red_ghost",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1777369146362,
+      "tag": "0002_productive_leech",
+      "breakpoints": true
     }
   ]
 }

@@ -7,8 +7,10 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { DRIZZLE } from '../../database/db.module';
 import { verificationRecords, users } from '../../database/schema';
+import * as schema from '../../database/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 import { ConflictException } from '@nestjs/common';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 export const MAX_PENDING_DOCUMENTS = 5;
 
@@ -18,9 +20,13 @@ export class VerificationService {
     private readonly stateMachine: StateMachineService,
     private readonly storageService: StorageService,
     @InjectQueue('verification-jobs') private verificationQueue: Queue,
-    @Inject(DRIZZLE) private readonly db: any,
+    @Inject(DRIZZLE) private readonly db: NodePgDatabase<typeof schema>,
   ) {}
 
+  /**
+   * Generates a presigned URL for direct-to-S3 upload.
+   * This offloads file handling from the backend.
+   */
   async generateUploadUrl(dto: UploadUrlDto) {
     const documentKey = `${randomUUID()}-${dto.fileName}`;
 
@@ -33,6 +39,10 @@ export class VerificationService {
     };
   }
 
+  /**
+   * Confirms that a document was uploaded and initiates the async verification process.
+   * Uses a transaction to ensure atomic state updates and enforce submission limits.
+   */
   async confirmUploadAndStartVerification(documentKey: string, sellerId: string) {
     const result = await this.db.transaction(async (tx: any) => {
       // 1. Lock the user row to serialize verification requests for this seller
@@ -54,6 +64,7 @@ export class VerificationService {
         throw new ConflictException(`Maximum ${MAX_PENDING_DOCUMENTS} pending documents reached`);
       }
 
+      // 3. Validate file metadata from storage (SSOT)
       const metadata = await this.storageService.getFileMetadata(documentKey);
       if (!metadata) {
         throw new BadRequestException('Document not found in storage');
@@ -67,13 +78,14 @@ export class VerificationService {
         throw new BadRequestException('Invalid MIME type');
       }
 
+      // 4. Create the initial record via the StateMachine
       const record = await this.stateMachine.createPendingRecord(
         sellerId,
         documentKey,
         metadata.name,
         metadata.size,
         metadata.mime,
-        tx, // Pass the transaction context
+        tx, // Pass the transaction context to maintain atomicity
       );
 
       return record;
@@ -81,6 +93,7 @@ export class VerificationService {
 
     const externalJobId = randomUUID();
 
+    // 5. Enqueue the background job for external verification
     await this.verificationQueue.add(
       'verify-document',
       {
@@ -97,7 +110,7 @@ export class VerificationService {
         attempts: 3,
         backoff: {
           type: 'exponential',
-          delay: 30000,
+          delay: 30000, // 30s initial backoff
         },
       },
     );
@@ -105,6 +118,9 @@ export class VerificationService {
     return { recordId: result.id, status: result.status };
   }
 
+  /**
+   * Fetches all verification attempts for a specific seller.
+   */
   async getAllVerifications(sellerId: string) {
     return this.db
       .select()
@@ -112,6 +128,9 @@ export class VerificationService {
       .where(eq(verificationRecords.sellerId, sellerId));
   }
 
+  /**
+   * Retrieves the most recent (or only) verification record for the seller.
+   */
   async getMyVerification(sellerId: string) {
     const records = await this.db
       .select()
