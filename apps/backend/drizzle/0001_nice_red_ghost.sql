@@ -4,7 +4,7 @@ DO $$ BEGIN
     END IF;
 END $$;
 --> statement-breakpoint
-CREATE TABLE "notifications" (
+CREATE TABLE IF NOT EXISTS "notifications" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
 	"title" text NOT NULL,
@@ -16,5 +16,10 @@ CREATE TABLE "notifications" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-ALTER TABLE "notifications" ADD CONSTRAINT "notifications_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-CREATE INDEX "notif_user_id_idx" ON "notifications" USING btree ("user_id");
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'notifications_user_id_users_id_fk') THEN
+        ALTER TABLE "notifications" ADD CONSTRAINT "notifications_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+    END IF;
+END $$;
+--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "notif_user_id_idx" ON "notifications" USING btree ("user_id");
