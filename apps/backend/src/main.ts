@@ -5,7 +5,7 @@ import { runMigrations } from './database/migrate';
 
 async function bootstrap() {
   // Run pending migrations before starting the server
-  await runMigrations();
+  // await runMigrations();
 
   const app = await NestFactory.create(AppModule);
 
