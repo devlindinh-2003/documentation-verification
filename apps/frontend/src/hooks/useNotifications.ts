@@ -1,5 +1,5 @@
+import { useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-
 import { api } from '../lib/api';
 import { Notification } from '../types';
 import { useAuth } from './useAuth';
@@ -30,8 +30,16 @@ export function useNotifications() {
       return data.count;
     },
     enabled: isAuthenticated,
-    refetchInterval: 30000, // Poll every 30 seconds
+    refetchInterval: 10000,
   });
+
+  const lastCount = useRef(unreadCount);
+  useEffect(() => {
+    if (unreadCount > lastCount.current) {
+      refetch();
+    }
+    lastCount.current = unreadCount;
+  }, [unreadCount, refetch]);
 
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: string) => {

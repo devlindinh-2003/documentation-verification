@@ -71,7 +71,6 @@ export class AuthService {
    * Creates a volatile demo account for quick evaluation.
    */
   async createDemoAccount() {
-    // Generate a unique email to avoid collision in high-concurrency scenarios
     const timestamp = Date.now();
     const randomStr = Math.random().toString(36).substring(7);
     const email = `demo_${timestamp}_${randomStr}@example.com`;

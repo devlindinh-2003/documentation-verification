@@ -41,14 +41,12 @@ async function bootstrap() {
 
   app.useGlobalPipes(new ZodValidationPipe());
 
-  // Ensure database schema is up to date before accepting requests
   try {
     await runMigrations();
   } catch (error) {
     console.error('Failed to run database migrations:', error);
   }
 
-  // Allow requests from frontend
   app.enableCors({
     origin: true,
     credentials: true,

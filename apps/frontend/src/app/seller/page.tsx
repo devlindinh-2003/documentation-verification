@@ -18,7 +18,6 @@ export default function SellerPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  // Route protection
   useEffect(() => {
     if (!isInitialized) return;
 
@@ -65,15 +64,16 @@ export default function SellerPage() {
   if (!isInitialized || !isAuthenticated || role !== 'seller') return null;
 
   const latestVerification = verifications?.[0];
+
   const activeCount =
-    verifications?.filter((v) => ['pending', 'processing'].includes(v.status)).length || 0;
+    verifications?.filter((v) => ['pending', 'processing', 'inconclusive'].includes(v.status))
+      .length || 0;
   const MAX_PENDING = 5;
   const isLimitReached = activeCount >= MAX_PENDING;
 
   return (
     <div className="min-h-screen bg-slate-50/50 pt-24 pb-20 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto space-y-10">
-        {/* Header Section */}
         <div className="text-center space-y-4">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600/10 rounded-2xl mb-2">
             <ShieldCheck className="text-blue-600" size={32} />
@@ -92,7 +92,6 @@ export default function SellerPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-10">
-            {/* Status Hero Card */}
             {latestVerification && (
               <div
                 className={`relative overflow-hidden rounded-3xl border-2 transition-all duration-500 p-8 sm:p-10 ${
@@ -123,7 +122,6 @@ export default function SellerPage() {
                     </p>
                   </div>
 
-                  {/* Visual Timeline (Mini) */}
                   <div className="flex items-center gap-2">
                     {[
                       { label: 'Submitted', done: true },
@@ -169,7 +167,6 @@ export default function SellerPage() {
                   </div>
                 </div>
 
-                {/* Background Decoration */}
                 <div
                   className={`absolute -right-20 -bottom-20 w-64 h-64 rounded-full blur-3xl opacity-10 ${
                     STATUS_CONFIG[latestVerification.status].theme === 'green'
@@ -184,7 +181,6 @@ export default function SellerPage() {
               </div>
             )}
 
-            {/* Upload Section */}
             {(!latestVerification ||
               ['rejected', 'denied'].includes(latestVerification.status)) && (
               <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-200 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -216,7 +212,6 @@ export default function SellerPage() {
               </div>
             )}
 
-            {/* History Section */}
             {verifications && verifications.length > 0 && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
@@ -268,7 +263,6 @@ export default function SellerPage() {
               </div>
             )}
 
-            {/* Empty State */}
             {!isLoading && (!verifications || verifications.length === 0) && (
               <div className="bg-white rounded-3xl border-2 border-dashed border-slate-200 p-20 text-center space-y-4">
                 <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto text-slate-300">

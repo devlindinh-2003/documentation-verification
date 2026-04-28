@@ -33,7 +33,7 @@ export function UploadDropzone({ onUpload, disabled, disabledMessage }: UploadDr
       'image/png': ['.png'],
     },
     maxFiles: 1,
-    maxSize: 10 * 1024 * 1024, // 10MB
+    maxSize: 10 * 1024 * 1024,
     disabled: disabled || uploading,
   });
 

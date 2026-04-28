@@ -1,9 +1,10 @@
-DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'notification_type') THEN
-        CREATE TYPE "public"."notification_type" AS ENUM('VERIFICATION_RESULT');
-    END IF;
+DO $$ BEGIN IF NOT EXISTS (
+	SELECT 1
+	FROM pg_type
+	WHERE typname = 'notification_type'
+) THEN CREATE TYPE "public"."notification_type" AS ENUM('VERIFICATION_RESULT');
+END IF;
 END $$;
---> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "notifications" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
@@ -15,11 +16,13 @@ CREATE TABLE IF NOT EXISTS "notifications" (
 	"metadata" jsonb NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
---> statement-breakpoint
-DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'notifications_user_id_users_id_fk') THEN
-        ALTER TABLE "notifications" ADD CONSTRAINT "notifications_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
-    END IF;
+DO $$ BEGIN IF NOT EXISTS (
+	SELECT 1
+	FROM pg_constraint
+	WHERE conname = 'notifications_user_id_users_id_fk'
+) THEN
+ALTER TABLE "notifications"
+ADD CONSTRAINT "notifications_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+END IF;
 END $$;
---> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "notif_user_id_idx" ON "notifications" USING btree ("user_id");
