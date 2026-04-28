@@ -21,6 +21,10 @@ import { LoggerMiddleware } from './common/middleware/logger.middleware';
     ConfigModule.forRoot({
       isGlobal: true,
       load: [configuration],
+      envFilePath: [
+        process.env.NODE_ENV === 'production' ? '.env.production' : '.env.local',
+        process.env.NODE_ENV === 'production' ? 'apps/backend/.env.production' : 'apps/backend/.env.local',
+      ],
     }),
     ThrottlerModule.forRoot([
       {
@@ -32,8 +36,8 @@ import { LoggerMiddleware } from './common/middleware/logger.middleware';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         connection: {
-          host: config.get<string>('REDIS_HOST'),
-          port: config.get<number>('REDIS_PORT'),
+          host: config.getOrThrow<string>('REDIS_HOST'),
+          port: config.getOrThrow<number>('REDIS_PORT'),
           password: config.get<string>('REDIS_PASSWORD'),
           tls: config.get<string>('REDIS_PASSWORD') ? {} : undefined,
         },
