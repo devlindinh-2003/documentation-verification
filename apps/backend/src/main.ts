@@ -41,7 +41,7 @@ async function bootstrap() {
 
   app.useGlobalPipes(new ZodValidationPipe());
 
-  // Ensure database schema is up to date before accepting xrequests
+  // Ensure database schema is up to date before accepting requests
   try {
     await runMigrations();
   } catch (error) {

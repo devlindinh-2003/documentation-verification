@@ -1,4 +1,9 @@
-CREATE TYPE "public"."notification_type" AS ENUM('VERIFICATION_RESULT');--> statement-breakpoint
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'notification_type') THEN
+        CREATE TYPE "public"."notification_type" AS ENUM('VERIFICATION_RESULT');
+    END IF;
+END $$;
+--> statement-breakpoint
 CREATE TABLE "notifications" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,

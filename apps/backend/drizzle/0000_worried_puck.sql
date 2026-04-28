@@ -1,5 +1,15 @@
-CREATE TYPE "public"."role" AS ENUM('seller', 'admin');--> statement-breakpoint
-CREATE TYPE "public"."status" AS ENUM('pending', 'processing', 'verified', 'rejected', 'inconclusive', 'approved', 'denied');--> statement-breakpoint
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'role') THEN
+        CREATE TYPE "public"."role" AS ENUM('seller', 'admin');
+    END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'status') THEN
+        CREATE TYPE "public"."status" AS ENUM('pending', 'processing', 'verified', 'rejected', 'inconclusive', 'approved', 'denied');
+    END IF;
+END $$;
+--> statement-breakpoint
 CREATE TABLE "audit_events" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"record_id" uuid NOT NULL,
