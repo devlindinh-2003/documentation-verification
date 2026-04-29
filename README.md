@@ -14,6 +14,7 @@ A production-grade document verification platform for marketplace sellers. Built
 
 - [Tech Stack](#-tech-stack)
 - [Architecture Overview](#-architecture-overview)
+- [Screen Captures](#-screen-captures)
 - [Project Structure](#-project-structure)
 - [Getting Started](#-getting-started)
 - [Test Credentials & Demo Flow](#-test-credentials--demo-flow)
@@ -66,6 +67,37 @@ A production-grade document verification platform for marketplace sellers. Built
 3. Worker calls the mock verification service → receives a result → updates record via webhook
 4. If result is `inconclusive`, an Admin must manually approve or deny
 5. Notifications are created for every final status change
+
+---
+
+## 📸 Screen Captures
+
+### Authentication Flow
+
+![Login Page](Documents/Images/login_page.png)
+_The login interface with the one-click demo account creation feature._
+
+### Seller Dashboard & Upload Flow
+
+![Seller Dashboard](Documents/Images/seller_page.png)
+_The seller dashboard where users can upload documents and track their verification status._
+
+![System Verified Status](Documents/Images/system_verify_page.png)
+_Real-time status update showing a successfully verified document._
+
+![System Rejected Status](Documents/Images/system_rejected_page.png)
+_Real-time status update showing a rejected document._
+
+![File Inconclusive Status](Documents/Images/file_inconclusive_page.png)
+_Real-time status update showing a document flagged as inconclusive, requiring admin review._
+
+### Admin Review Queue
+
+![Admin Dashboard](Documents/Images/admin_page.png)
+_The admin dashboard displaying the queue of verification records waiting for review._
+
+![Admin File Detail](Documents/Images/admin_file_detail_page.png)
+_The admin interface for reviewing a specific document and submitting an approve/deny decision._
 
 ---
 
