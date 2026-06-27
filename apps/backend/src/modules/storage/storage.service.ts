@@ -30,43 +30,58 @@ export class StorageService {
   }
 
   async getFileMetadata(path: string) {
-    const { data, error } = await this.supabase.storage.from(this.bucket).list('', {
-      search: path,
-    });
-
-    // Supabase 'list' doesn't always return a single object metadata easily by path if it's nested
-    // but getMetadata is not available in the public JS SDK as a single call always.
-    // However, we can use info or just try to get the public URL/signed URL to check existence.
-    // Actually, data from list will contain the file if it exists.
-
-    // Better way to get specific file info:
+    // 1. Attempt standard list check
     const { data: fileData, error: fileError } = await this.supabase.storage
       .from(this.bucket)
       .list(path.includes('/') ? path.split('/').slice(0, -1).join('/') : '', {
         search: path.split('/').pop(),
       });
 
-    if (fileError || !fileData || fileData.length === 0) {
-      return null;
+    if (!fileError && fileData && fileData.length > 0) {
+      const file = fileData[0];
+      return {
+        size: file.metadata?.size || 0,
+        mime: file.metadata?.mimetype || '',
+        name: file.name,
+      };
     }
 
-    const file = fileData[0];
-    return {
-      size: file.metadata?.size || 0,
-      mime: file.metadata?.mimetype || '',
-      name: file.name,
-    };
+    // 2. Fallback: If list returns empty/error (common when RLS SELECT policies are missing
+    // for the anon key on a public bucket), fetch metadata via HTTP HEAD request on the public URL.
+    try {
+      const { data: { publicUrl } } = this.supabase.storage.from(this.bucket).getPublicUrl(path);
+      const response = await fetch(publicUrl, { method: 'HEAD' });
+      if (response.ok) {
+        const size = parseInt(response.headers.get('content-length') || '0', 10);
+        const mime = response.headers.get('content-type') || '';
+        return {
+          size,
+          mime,
+          name: path.split('/').pop() || path,
+        };
+      }
+    } catch (e) {
+      // Ignore and return null below
+    }
+
+    return null;
   }
 
   async getSignedUrl(path: string, expiresIn = 3600) {
-    const { data, error } = await this.supabase.storage
-      .from(this.bucket)
-      .createSignedUrl(path, expiresIn);
+    try {
+      const { data, error } = await this.supabase.storage
+        .from(this.bucket)
+        .createSignedUrl(path, expiresIn);
 
-    if (error) {
-      throw new InternalServerErrorException(`Failed to create signed URL: ${error.message}`);
+      if (!error && data?.signedUrl) {
+        return data.signedUrl;
+      }
+    } catch (e) {
+      // Fallback to public URL below
     }
 
-    return data.signedUrl;
+    // Fallback: If createSignedUrl fails (requires SELECT permission), return public URL
+    const { data: { publicUrl } } = this.supabase.storage.from(this.bucket).getPublicUrl(path);
+    return publicUrl;
   }
 }

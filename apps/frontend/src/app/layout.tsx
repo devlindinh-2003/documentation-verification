@@ -1,6 +1,7 @@
 import { Roboto } from 'next/font/google';
 import { Header } from '../components/Header';
 import { Providers } from '../components/Providers';
+import { Analytics } from '@vercel/analytics/react';
 import '../app/globals.css';
 
 const roboto = Roboto({
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Header />
           <main>{children}</main>
         </Providers>
+        <Analytics />
       </body>
     </html>
   );
