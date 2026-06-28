@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, Inject } from '@nestjs/common';
+import { Injectable, BadRequestException, ServiceUnavailableException, Inject } from '@nestjs/common';
 import { StorageService } from '../storage/storage.service';
 import { StateMachineService } from './state-machine.service';
 import { UploadUrlDto } from './dto/upload-url.dto';
@@ -94,26 +94,30 @@ export class VerificationService {
     const externalJobId = randomUUID();
 
     // 5. Enqueue the background job for external verification
-    await this.verificationQueue.add(
-      'verify-document',
-      {
-        recordId: result.id,
-        sellerId: result.sellerId,
-        documentKey: result.documentKey,
-        documentName: result.documentName,
-        documentSize: result.documentSize,
-        version: result.version,
-        externalJobId,
-      },
-      {
-        jobId: externalJobId,
-        attempts: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 30000, // 30s initial backoff
+    try {
+      await this.verificationQueue.add(
+        'verify-document',
+        {
+          recordId: result.id,
+          sellerId: result.sellerId,
+          documentKey: result.documentKey,
+          documentName: result.documentName,
+          documentSize: result.documentSize,
+          version: result.version,
+          externalJobId,
         },
-      },
-    );
+        {
+          jobId: externalJobId,
+          attempts: 3,
+          backoff: {
+            type: 'exponential',
+            delay: 30000, // 30s initial backoff
+          },
+        },
+      );
+    } catch (error) {
+      throw new ServiceUnavailableException('Queue service is temporarily unavailable. Please try again later.');
+    }
 
     return { recordId: result.id, status: result.status };
   }

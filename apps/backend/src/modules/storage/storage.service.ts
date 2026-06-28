@@ -9,7 +9,9 @@ export class StorageService {
 
   constructor(private readonly configService: ConfigService) {
     const supabaseUrl = this.configService.get<string>('SUPABASE_URL')!;
-    const supabaseKey = this.configService.get<string>('SUPABASE_ANON_KEY')!;
+    const supabaseKey =
+      this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY') ||
+      this.configService.get<string>('SUPABASE_ANON_KEY')!;
     this.bucket = this.configService.get<string>('SUPABASE_BUCKET')!;
 
     this.supabase = createClient(supabaseUrl, supabaseKey);
@@ -50,7 +52,7 @@ export class StorageService {
     // for the anon key on a public bucket), fetch metadata via HTTP HEAD request on the public URL.
     try {
       const { data: { publicUrl } } = this.supabase.storage.from(this.bucket).getPublicUrl(path);
-      const response = await fetch(publicUrl, { method: 'HEAD' });
+      const response = await fetch(publicUrl, { method: 'HEAD', signal: AbortSignal.timeout(5000) });
       if (response.ok) {
         const size = parseInt(response.headers.get('content-length') || '0', 10);
         const mime = response.headers.get('content-type') || '';
