@@ -1,7 +1,7 @@
 import { Roboto } from 'next/font/google';
 import { Header } from '../components/Header';
 import { Providers } from '../components/Providers';
-import { Analytics } from '@vercel/analytics/react';
+import { Analytics } from '@vercel/analytics/next';
 import '../app/globals.css';
 
 const roboto = Roboto({
